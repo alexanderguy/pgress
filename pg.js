@@ -429,30 +429,28 @@
     PGConn.prototype.connect = function (user, password) {
 	var state = this;
 
-	var _ws = new WebSocket(this._url, "binary");
-	_ws.binaryType = "arraybuffer";
+	var ws = new WebSocket(this._url, "binary");
+	ws.binaryType = "arraybuffer";
 
-	this._ws = _ws;
+	state.conn = ws;
 
 	this.addEventListener("authenticationmd5password", function (e) {
 	    state.passwordMessage(user, e.detail.salt, password);
 	});
 
-	this.conn = _ws;
-
-	_ws.onopen = function (e) {
+	ws.onopen = function (e) {
 	    state.startupMessage({user: user});
 	};
 
-	_ws.onerror = function (e) {
+	ws.onerror = function (e) {
 	    console.log("error:", e);
 	};
 
-	_ws.onclose = function (e) {
+	ws.onclose = function (e) {
 	    console.log("close:", e);
 	};
 
-	_ws.onmessage = function (e) {
+	ws.onmessage = function (e) {
 	    state.recv(e.data);
 	};
     };
