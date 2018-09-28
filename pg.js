@@ -241,7 +241,7 @@
 
     // EmptyQueryResponse
     PGConn.prototype._B_I = function (r) {
-	this.dispatchEvent(new CustomEvent("emptyqueryresopnse"));
+	this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
     };
 
     // ErrorResponse
@@ -252,7 +252,7 @@
 	    errors.push({code: r.char8(), msg: r.string()});
 	}
 
-	this.dispatchEvent(new CustomEvent("errorresponse", { detail: errors }));
+	this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
     }
 
     // Authentication Request
@@ -264,8 +264,8 @@
 
 	switch (authType) {
 	    case 0:
-		// Authentication OK
-		event = new CustomEvent("authenticationok");
+		// AuthenticationOk
+		event = new CustomEvent("AuthenticationOk");
 		break;
 	    case 5:
 
@@ -280,7 +280,7 @@
 		    salt: salt
 		};
 
-		event = new CustomEvent("authenticationmd5password", { detail: detail });
+		event = new CustomEvent("AuthenticationMD5Password", { detail: detail });
 		break;
 	    default:
 		console.log("unknown authentication message for code:", authType);
@@ -299,7 +299,7 @@
 	    notices.push({code: r.char8(), msg: r.string()});
 	}
 
-	this.dispatchEvent(new CustomEvent("noticeresponse", { detail: notices }));
+	this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
     };
 
     // ParameterStatus
@@ -309,7 +309,7 @@
 	    value: reader.string()
 	};
 
-	this.dispatchEvent(new CustomEvent("paramaterstatus", {detail: param}));
+	this.dispatchEvent(new CustomEvent("ParameterStatus", {detail: param}));
     }
 
     // BackendKeyData
@@ -319,7 +319,7 @@
 	    secretKey: reader.int32()
 	};
 
-	this.dispatchEvent(new CustomEvent("backendkeydata", {detail: keyData}));
+	this.dispatchEvent(new CustomEvent("BackendKeyData", {detail: keyData}));
     }
 
     // PasswordMessage
@@ -341,7 +341,7 @@
     // ReadyForQuery
     PGConn.prototype._B_Z = function (reader) {
 	var status = reader.char8();
-	var event = new CustomEvent("readyforquery", {
+	var event = new CustomEvent("ReadyForQuery", {
 	    detail: {
 		status: status
 	    }
@@ -375,7 +375,7 @@
 	    fields.push(f);
 	}
 
-	var event = new CustomEvent("rowdescription", {
+	var event = new CustomEvent("RowDescription", {
 	    detail: {
 		fields: fields
 	    }
@@ -394,7 +394,7 @@
 	    cols.push(reader.uint8array(nBytes));
 	}
 
-	var event = new CustomEvent("datarow", {
+	var event = new CustomEvent("DataRow", {
 	    detail: cols
 	});
 	this.dispatchEvent(event);
@@ -403,7 +403,7 @@
     // CommandComplete
     PGConn.prototype._B_C = function (reader) {
 	var tag = reader.string()
-	var event = new CustomEvent("commandcomplete")
+	var event = new CustomEvent("CommandComplete")
 	this.dispatchEvent(event)
     };
 
@@ -456,11 +456,11 @@
 	    return that._curQuery[0];
 	};
 
-	conn.addEventListener("authenticationmd5password", function (e) {
+	conn.addEventListener("AuthenticationMD5Password", function (e) {
 	    conn.passwordMessage(that.user, e.detail.salt, that.password);
 	});
 
-	conn.addEventListener("commandcomplete", function (e) {
+	conn.addEventListener("CommandComplete", function (e) {
 	    var query = _getQuery();
 
 	    if (!query) {
@@ -472,7 +472,7 @@
 	    that._curQuery.shift();
 	});
 
-	conn.addEventListener("rowdescription", function (e) {
+	conn.addEventListener("RowDescription", function (e) {
 	    var query = _getQuery();
 
 	    if (!query) {
@@ -482,7 +482,7 @@
 	    query.rowDescription(e);
 	});
 
-	conn.addEventListener("datarow", function (e) {
+	conn.addEventListener("DataRow", function (e) {
 	    var query = _getQuery();
 
 	    if (!query) {
@@ -492,7 +492,7 @@
 	    query.dataRow(e);
 	});
 
-	conn.addEventListener("noticeResponse", function (e) {
+	conn.addEventListener("NoticeResponse", function (e) {
 	    var query = _getQuery();
 
 	    if (!query) {
@@ -502,7 +502,7 @@
 	    query.noticeResponse(e);
 	});
 
-	conn.addEventListener("errorresponse", function (e) {
+	conn.addEventListener("ErrorResponse", function (e) {
 	    var query = _getQuery();
 
 	    if (!query) {
@@ -539,7 +539,7 @@
 	};
 
 	return new Promise((resolve, reject) => {
-	    that.conn.addEventListener("readyforquery", (e) => {
+	    that.conn.addEventListener("ReadyForQuery", (e) => {
 		that.state = "READY";
 		resolve();
 	    });
