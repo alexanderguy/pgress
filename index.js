@@ -9,6 +9,12 @@ pg.connect().then(() => {
 	console.log("we got an error:", err);
     });
 
+    pg.simpleQuery("select broken();").then((res) => {
+	console.log("got a random:", res);
+    }).catch((err) => {
+	console.log("we got an error:", err);
+    });
+
     pg.simpleQuery("select now();").then((res) => {
 	console.log("got a time:", res);
     }).catch((err) => {
