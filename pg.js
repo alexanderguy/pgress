@@ -85,6 +85,11 @@
 	this.pos += 4;
     };
 
+    MsgWriter.prototype.int16 = function (v) {
+	this.view.setInt16(this.pos, v);
+	this.pos += 2;
+    };
+
     MsgWriter.prototype.uint8array = function (v) {
 	// XXX - We could do this better.
 	for (var i = 0; i < v.length; i++) {
