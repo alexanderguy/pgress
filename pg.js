@@ -236,6 +236,11 @@
 	}
     };
 
+    // EmptyQueryResponse
+    PGConn.prototype._B_I = function (r) {
+	this.dispatchEvent(new CustomEvent("emptyqueryresopnse"));
+    };
+
     // ErrorResponse
     PGConn.prototype._B_E = function (r) {
 	var errors = [];
@@ -282,6 +287,17 @@
 
 	this.dispatchEvent(event);
     }
+
+    // NoticeResponse
+    PGConn.prototype._B_N = function (reader) {
+	var notices = [];
+
+	while (r.view.getUint8(r.pos) != 0) {
+	    notices.push({code: r.char8(), msg: r.string()});
+	}
+
+	this.dispatchEvent(new CustomEvent("noticeresponse", { detail: notices }));
+    };
 
     // ParameterStatus
     PGConn.prototype._B_S = function (reader) {
