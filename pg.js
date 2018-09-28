@@ -211,11 +211,11 @@
 	    var msg = this.buf.slice(0, byteLength + 1);
 	    this.buf = this.buf.slice(byteLength + 1);
 
-	    this.dispatch(msg);
+	    this._dispatchMsg(msg);
 	}
     }
 
-    PGConn.prototype.dispatch = function (buf) {
+    PGConn.prototype._dispatchMsg = function (buf) {
 	var view = new DataView(buf);
 
 	if (0) {
