@@ -263,6 +263,27 @@
 	this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
     }
 
+    // Execute (F)
+    PGConn.prototype.execute = function (portal, nRows) {
+	if (!nRows) {
+	    nRows = 0;
+	}
+
+	var msg = new MsgWriter("E");
+	msg.string(portal);
+	msg.int32(nRows);
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
+    // Flush (F)
+    PGConn.prototype.flush = function () {
+	var msg = new MsgWriter("H");
+	var packet = msg.finish();
+	this.conn.send(packet);
+    }
+
     // Authentication Request
     PGConn.prototype._B_R = function (r) {
 	var authType = r.int32();
@@ -328,6 +349,81 @@
 	};
 
 	this.dispatchEvent(new CustomEvent("BackendKeyData", {detail: keyData}));
+    }
+
+    // Bind (F)
+    PGConn.prototype.bind = function (portalName, preparedName, paramFormats, params, resultFormats) {
+	var i;
+	var msg = new MsgWriter('B');
+
+	msg.string(portalName);
+	msg.string(preparedName);
+
+	var _encodeFormat = function (v) {
+	    if (v == "binary") {
+		return 1;
+	    }
+
+	    // Otherwise, we want text.
+	    return 0;
+	}
+
+	// Parameter Formats
+	msg.int16(paramFormats.length);
+	for (i = 0; i < paramFormats.length; i++) {
+	    msg.int16(_encodeFormat(paramFormats[i]));
+	}
+
+	// Parameters
+	var enc = new TextEncoder();
+	msg.int16(params.length);
+	for (i = 0; i < params.length; i++) {
+	    var buf = enc.encode(params[i]);
+	    msg.int32(buf.length);
+	    msg.uint8array(buf);
+	}
+
+	// Result Formats
+	msg.int16(resultFormats.length);
+	for (i = 0; i < resultFormats.length; i++) {
+	    msg.int16(_encodeFormat(resultFormats[i]));
+	}
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    }
+
+    // BindComplete (B)
+    PGConn.prototype._B_2 = function (reader) {
+	this.dispatchEvent(new CustomEvent("BindComplete"));
+    }
+
+    // Parse (F)
+    PGConn.prototype.parse = function (name, sqlQuery, paramTypes) {
+	if (!name) {
+	    name = "";
+	}
+
+	if (!paramTypes) {
+	    paramTypes = [];
+	}
+
+	var msg = new MsgWriter('P');
+	msg.string(name);
+	msg.string(sqlQuery);
+
+	msg.int16(paramTypes.length);
+	for (var i = 0; i < paramTypes.length; i++) {
+	    msg.int32(paramTypes[i]);
+	}
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
+    // ParseComplete (B)
+    PGConn.prototype._B_1 = function (reader) {
+	this.dispatchEvent(new CustomEvent("ParseComplete"));
     }
 
     // PasswordMessage
@@ -521,8 +617,32 @@
 
 	    that._curQuery.shift();
 	});
-    };
 
+	conn.addEventListener("ParseComplete", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.parseComplete(e);
+
+	    that._curQuery.shift();
+	});
+
+	conn.addEventListener("BindComplete", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.bindComplete(e);
+
+	    that._curQuery.shift();
+	});
+    };
+    PGState.prototype._newQuery
 
     PGState.prototype.connect = function () {
 	var ws = new WebSocket(this.url, "binary");
@@ -554,30 +674,51 @@
 	});
     };
 
+    PGState.prototype._newQuery = function (query) {
+	this._curQuery.push(query);
+    };
+
     PGState.prototype.simpleQuery = function (query) {
-	var h = new PGQuery(query);
+	var h = new PGQuery(this);
 
 	this.conn.query(query);
-
-	this._curQuery.push(h);
 
 	return h.handleSimpleQuery();
     };
 
-    var PGQuery = function (sqlString) {
-	this.query = sqlString;
-	this._rowDesc = undefined;
+    PGState.prototype.extendedQuery = function (name) {
+	var h = new PGQuery(this, name);
+	return h;
+    };
+
+    var PGQuery = function (parent, name) {
+	this.parent = parent;
+	this.name = name || "";
+
+	this.promises = [];
+
+	this._rowDesc = [];
 	this._dataRows = [];
 	this.notice = undefined;
     };
-
 
     var _decodeRow = function (desc, data) {
 	var res = [];
 	var d = new TextDecoder("utf-8");
 
 	for (var i = 0; i < data.length; i++) {
-	    if (desc[i].format != "text") {
+	    var format, name;
+
+	    if (i < desc.length) {
+		format = desc[i].format;
+		name = desc[i].name;
+	    }
+
+	    if (!desc.format) {
+		format = "text";
+	    }
+
+	    if (format != "text") {
 		// XXX - What do we do here?
 		console.log("we have no idea how to decode this.");
 		res.push(null);
@@ -587,8 +728,6 @@
 		res.push(s);
 
 		// Attach it by name
-		var name = desc[i].name;
-
 		if (name) {
 		    res[name] = s;
 		}
@@ -599,22 +738,68 @@
     };
 
     PGQuery.prototype.handleSimpleQuery = function () {
-	var that = this;
+	var query = this;
 
 	return new Promise((resolve, reject) => {
-	    that._resolve = resolve;
-	    that._reject = reject;
+	    query.parent._newQuery(query);
+	    query.promises.push([resolve, reject]);
 	});
     };
 
+    PGQuery.prototype.parse = function(sqlQuery, paramTypes) {
+	var query = this;
+	return new Promise((resolve, reject) => {
+	    query.parent._newQuery(query);
+	    query.parent.conn.parse(query.name, sqlQuery, paramTypes);
+	    query.promises.push([resolve, reject]);
+	    query.parent.conn.flush();
+	});
+    };
+
+    PGQuery.prototype.bind = function (paramFormats, params, resultFormats) {
+	var query = this;
+
+	return new Promise((resolve, reject) => {
+	    query.parent._newQuery(query);
+	    query.parent.conn.bind(query.name, query.name, paramFormats, params, resultFormats);
+	    query.promises.push([resolve, reject]);
+	    query.parent.conn.flush();
+	});
+    };
+
+    PGQuery.prototype.execute = function (nRows) {
+	nRows = nRows || 0;
+	var query = this;
+
+	return new Promise((resolve, reject) => {
+	    query.parent._newQuery(query);
+	    query.parent.conn.execute(query.name, nRows);
+	    query.promises.push([resolve, reject]);
+	    query.parent.conn.flush();
+	});
+    };
+
+    PGQuery.prototype.parseComplete = function (e) {
+	var query = this;
+
+	query.promises.shift()[0]();
+    }
+
+    PGQuery.prototype.bindComplete = function (e) {
+	var query = this;
+
+	query.promises.shift()[0]();
+    }
+
     PGQuery.prototype.commandComplete = function (e) {
+	var query = this;
 	var rows = [];
 
 	for (var i = 0; i < this._dataRows.length; i++) {
 	    rows.push(_decodeRow(this._rowDesc, this._dataRows[i]));
 	}
-
-	this._resolve(rows);
+	// XXX - This only makes sense for a simple query.
+	query.promises.shift()[0](rows);
     };
 
     PGQuery.prototype.rowDescription = function (e) {
@@ -626,11 +811,12 @@
     };
 
     PGQuery.prototype.errorResponse = function (e) {
-	this._reject(e.detail);
+	var query = this;
+	query.promises.shift()[1](e.detail);
     };
 
     PGQuery.prototype.noticeResponse = function (e) {
-	this.notice = e.detail;
+	// What to do here?
     };
 
     window.PGConn = PGConn;
