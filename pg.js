@@ -392,6 +392,24 @@
 	});
     };
 
+    // StartupMessage
+    PGConn.prototype.startupMessage = function (params) {
+	var msg = new MsgWriter();
+
+	// Version
+	msg.int32(196608);
+
+	// Parameters
+	for (var key in params) {
+	    msg.string(key);
+	    msg.string(params[key]);
+	}
+	msg.uint8(0);
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
     PGConn.prototype.connect = function (user, password) {
 	var state = this;
 
@@ -419,19 +437,7 @@
 	this.conn = _ws;
 
 	_ws.onopen = function (e) {
-	    var msg = new MsgWriter();
-
-	    // Version
-	    msg.int32(196608);
-
-	    // Parameters
-	    msg.string("user");
-	    msg.string(user);
-	    msg.uint8(0);
-
-	    var packet = msg.finish();
-
-	    _ws.send(packet);
+	    state.startupMessage({user: user});
 	};
 
 	_ws.onerror = function (e) {
