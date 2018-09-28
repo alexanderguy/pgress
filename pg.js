@@ -455,11 +455,6 @@
 	_ws.onmessage = function (e) {
 	    state.recv(e.data);
 	};
-
-	var p = new Promise((resolve, reject) => {
-	});
-
-	return p;
     };
 
     window.PGConn = PGConn;
