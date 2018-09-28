@@ -1,49 +1,49 @@
-function PGMessageReader(view) {
+function MsgReader(view) {
     this.view = view;
     this.pos = 0;
 }
 
-PGMessageReader.prototype._consume = function (n) {
+MsgReader.prototype._consume = function (n) {
     this.pos += n;
 };
 
-PGMessageReader.prototype.left = function () {
+MsgReader.prototype.left = function () {
     return this.view.byteLength - this.pos;
 };
 
-PGMessageReader.prototype.char8 = function () {
+MsgReader.prototype.char8 = function () {
     var val = this.uint8();
     return String.fromCharCode(val);
 }
 
-PGMessageReader.prototype.uint8 = function () {
+MsgReader.prototype.uint8 = function () {
     var val = this.view.getUint8(this.pos);
     this._consume(1);
 
     return val;
 }
 
-PGMessageReader.prototype.uint8array = function (n) {
+MsgReader.prototype.uint8array = function (n) {
     var buf = new Uint8Array(this.view.buffer, this.view.byteOffset + this.pos, n);
     this._consume(n);
     return buf;
 }
 
-PGMessageReader.prototype.int32 = function () {
+MsgReader.prototype.int32 = function () {
     var val = this.view.getInt32(this.pos);
     this._consume(4);
 
     return val;
 }
 
-PGMessageReader.prototype.int16 = function () {
+MsgReader.prototype.int16 = function () {
     var val = this.view.getInt16(this.pos);
     this._consume(2);
 
     return val;
 }
 
-PGMessageReader.prototype.string = function () {
+MsgReader.prototype.string = function () {
     var buf = new Uint8Array(this.view.buffer);
     // Offset from the view base, plus the current position.
     var bufOffset = this.view.byteOffset + this.pos;
@@ -62,7 +62,7 @@ PGMessageReader.prototype.string = function () {
     return s;
 }
 
-function PGMessageBuilder(id) {
+function MsgWriter(id) {
     this.buf = new ArrayBuffer(4096);
     this.view = new DataView(this.buf);
     this.pos = 0;
@@ -79,12 +79,12 @@ function PGMessageBuilder(id) {
     return this;
 }
 
-PGMessageBuilder.prototype.int32 = function (v) {
+MsgWriter.prototype.int32 = function (v) {
     this.view.setInt32(this.pos, v);
     this.pos += 4;
 };
 
-PGMessageBuilder.prototype.string = function (v) {
+MsgWriter.prototype.string = function (v) {
     var enc = new TextEncoder();
     var sBuf = enc.encode(v);
 
@@ -95,12 +95,12 @@ PGMessageBuilder.prototype.string = function (v) {
     this.uint8(0);
 };
 
-PGMessageBuilder.prototype.uint8 = function (v) {
+MsgWriter.prototype.uint8 = function (v) {
     this.view.setUint8(this.pos, v);
     this.pos += 1;
 };
 
-PGMessageBuilder.prototype.finish = function () {
+MsgWriter.prototype.finish = function () {
     var res = this.buf.slice(0, this.pos);
     var view = new DataView(res);
 
@@ -221,7 +221,7 @@ PGConn.prototype.dispatch = function (buf) {
 	console.log("got message:", new Uint8Array(buf));
     }
 
-    var r = new PGMessageReader(view);
+    var r = new MsgReader(view);
     var msgCode = r.char8();
     var handler = this["_B_" + msgCode];
 
@@ -365,7 +365,7 @@ PGConn.prototype._B_C = function (reader) {
 };
 
 PGConn.prototype.query = function (sqlString) {
-    var msg = new PGMessageBuilder("Q");
+    var msg = new MsgWriter("Q");
     msg.string(sqlString);
 
     var packet = msg.finish();
@@ -392,7 +392,7 @@ PGConn.prototype.connect = function (user, password) {
 	hashRes.update(salt);
 
 	var hashRes = "md5" + hashRes.hex();
-	var msg = new PGMessageBuilder("p");
+	var msg = new MsgWriter("p");
 	msg.string(hashRes)
 
 	var packet = msg.finish();
@@ -402,7 +402,7 @@ PGConn.prototype.connect = function (user, password) {
     this.conn = _ws;
 
     _ws.onopen = function (e) {
-	var msg = new PGMessageBuilder();
+	var msg = new MsgWriter();
 
 	// Version
 	msg.int32(196608);
