@@ -114,8 +114,7 @@
 	return res;
     };
 
-    var PGConn = function (url) {
-	this._url = url;
+    var PGConn = function () {
 	this.buf = new ArrayBuffer();
 	this._events = {};
 	return this;
@@ -138,7 +137,7 @@
     PGConn.prototype.dispatchEvent = function (event) {
 	var eventType = event.type.toLowerCase();
 
-	console.log("event type is:", eventType);
+	console.log("event type is:", eventType, event);
 
 	var handlers = this._events[eventType];
 
@@ -173,6 +172,10 @@
 	}
 
 	this._events = newHandlers;
+    };
+
+    PGConn.prototype.attachSocket = function (sock) {
+	this.conn = sock;
     };
 
     PGConn.prototype.recv = function (incoming) {
@@ -372,7 +375,12 @@
 	    fields.push(f);
 	}
 
-	var event = new CustomEvent("rowdescription");
+	var event = new CustomEvent("rowdescription", {
+	    detail: {
+		fields: fields
+	    }
+	});
+
 	this.dispatchEvent(event);
     };
 
@@ -386,7 +394,9 @@
 	    cols.push(reader.uint8array(nBytes));
 	}
 
-	var event = new CustomEvent("datarow");
+	var event = new CustomEvent("datarow", {
+	    detail: cols
+	});
 	this.dispatchEvent(event);
     }
 
@@ -426,20 +436,36 @@
 	this.conn.send(packet);
     };
 
-    PGConn.prototype.connect = function (user, password) {
-	var state = this;
+    // State Handler For Postgres Connections
+    var PGState = function (url, database, user, password) {
+	this.url = url;
+	this.database = database;
+	this.user = user;
+	this.password = password;
+	this.state = "OFFLINE";
 
-	var ws = new WebSocket(this._url, "binary");
-	ws.binaryType = "arraybuffer";
+	this.conn = new PGConn();
 
-	state.conn = ws;
+	var conn = this.conn;
+	var that = this;
 
-	this.addEventListener("authenticationmd5password", function (e) {
-	    state.passwordMessage(user, e.detail.salt, password);
+	conn.addEventListener("readyforquery", (e) => {
+	    that.state = "READY";
 	});
 
+	conn.addEventListener("authenticationmd5password", function (e) {
+	    conn.passwordMessage(that.user, e.detail.salt, that.password);
+	});
+    };
+
+    PGState.prototype.connect = function () {
+	var ws = new WebSocket(this.url, "binary");
+	ws.binaryType = "arraybuffer";
+	this.conn.attachSocket(ws);
+
+	var that = this;
 	ws.onopen = function (e) {
-	    state.startupMessage({user: user});
+	    that.conn.startupMessage({user: that.user});
 	};
 
 	ws.onerror = function (e) {
@@ -451,9 +477,10 @@
 	};
 
 	ws.onmessage = function (e) {
-	    state.recv(e.data);
+	    that.conn.recv(e.data);
 	};
     };
 
     window.PGConn = PGConn;
+    window.PGState = PGState;
 })();
