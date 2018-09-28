@@ -319,6 +319,22 @@
 	this.dispatchEvent(new CustomEvent("backendkeydata", {detail: keyData}));
     }
 
+    // PasswordMessage
+    PGConn.prototype.passwordMessage = function (user, salt, password) {
+	var passHash = md5.hex(password + user);
+	var hashRes = md5.create();
+
+	hashRes.update(passHash);
+	hashRes.update(salt);
+
+	var hashRes = "md5" + hashRes.hex();
+	var msg = new MsgWriter("p");
+	msg.string(hashRes)
+
+	var packet = msg.finish();
+	this.conn.send(packet)
+    }
+
     // ReadyForQuery
     PGConn.prototype._B_Z = function (reader) {
 	var status = reader.char8();
@@ -419,19 +435,7 @@
 	this._ws = _ws;
 
 	this.addEventListener("authenticationmd5password", function (e) {
-	    var salt = e.detail.salt;
-	    var passHash = md5.hex(password + user);
-	    var hashRes = md5.create();
-
-	    hashRes.update(passHash);
-	    hashRes.update(salt);
-
-	    var hashRes = "md5" + hashRes.hex();
-	    var msg = new MsgWriter("p");
-	    msg.string(hashRes)
-
-	    var packet = msg.finish();
-	    state.conn.send(packet)
+	    state.passwordMessage(user, e.detail.salt, password);
 	});
 
 	this.conn = _ws;
