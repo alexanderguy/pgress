@@ -85,14 +85,17 @@
 	this.pos += 4;
     };
 
+    MsgWriter.prototype.uint8array = function (v) {
+	// XXX - We could do this better.
+	for (var i = 0; i < v.length; i++) {
+	    this.uint8(v[i]);
+	}
+    };
+
     MsgWriter.prototype.string = function (v) {
 	var enc = new TextEncoder();
 	var sBuf = enc.encode(v);
-
-	for (var i = 0; i < sBuf.length; i++) {
-	    this.uint8(sBuf[i]);
-	}
-
+	this.uint8array(sBuf)
 	this.uint8(0);
     };
 
