@@ -20,4 +20,19 @@ pg.connect().then(() => {
     }).catch((err) => {
 	console.log("we got an error:", err);
     });
+
+    var q = pg.extendedQuery("");
+    q.parse("select now()", [])
+     .then((res) => {
+	 return q.bind([], [], []);
+     })
+     .then((res) => {
+	 return q.execute();
+     })
+     .then((res) => {
+	 console.log("got some results:", res);
+     })
+     .catch((err) => {
+	 console.log("we got an error:", err);
+     });
 });
