@@ -137,7 +137,7 @@
     PGConn.prototype.dispatchEvent = function (event) {
 	var eventType = event.type.toLowerCase();
 
-	console.log("event type is:", eventType, event);
+	// console.log("event type is:", eventType, event);
 
 	var handlers = this._events[eventType];
 
@@ -413,9 +413,6 @@
 
 	var packet = msg.finish();
 	this.conn.send(packet);
-
-	return new Promise((resolve, reject) => {
-	});
     };
 
     // StartupMessage
@@ -443,20 +440,81 @@
 	this.user = user;
 	this.password = password;
 	this.state = "OFFLINE";
+	this._curQuery = [];
 
 	this.conn = new PGConn();
 
 	var conn = this.conn;
 	var that = this;
 
-	conn.addEventListener("readyforquery", (e) => {
-	    that.state = "READY";
-	});
+	var _getQuery = function () {
+	    if (that._curQuery.length < 1) {
+		console.log("got a command complete, but there's no running query to proxy to?");
+		return undefined;
+	    }
+
+	    return that._curQuery[0];
+	};
 
 	conn.addEventListener("authenticationmd5password", function (e) {
 	    conn.passwordMessage(that.user, e.detail.salt, that.password);
 	});
+
+	conn.addEventListener("commandcomplete", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.commandComplete(e);
+
+	    that._curQuery.shift();
+	});
+
+	conn.addEventListener("rowdescription", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.rowDescription(e);
+	});
+
+	conn.addEventListener("datarow", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.dataRow(e);
+	});
+
+	conn.addEventListener("noticeResponse", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.noticeResponse(e);
+	});
+
+	conn.addEventListener("errorresponse", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.errorResponse(e);
+
+	    that._curQuery.shift();
+	});
     };
+
 
     PGState.prototype.connect = function () {
 	var ws = new WebSocket(this.url, "binary");
@@ -479,6 +537,92 @@
 	ws.onmessage = function (e) {
 	    that.conn.recv(e.data);
 	};
+
+	return new Promise((resolve, reject) => {
+	    that.conn.addEventListener("readyforquery", (e) => {
+		that.state = "READY";
+		resolve();
+	    });
+	});
+    };
+
+    PGState.prototype.simpleQuery = function (query) {
+	var h = new PGQuery(query);
+
+	this.conn.query(query);
+
+	this._curQuery.push(h);
+
+	return h.handleSimpleQuery();
+    };
+
+    var PGQuery = function (sqlString) {
+	this.query = sqlString;
+	this._rowDesc = undefined;
+	this._dataRows = [];
+	this.notice = undefined;
+    };
+
+
+    var _decodeRow = function (desc, data) {
+	var res = [];
+	var d = new TextDecoder("utf-8");
+
+	for (var i = 0; i < data.length; i++) {
+	    if (desc[i].format != "text") {
+		// XXX - What do we do here?
+		console.log("we have no idea how to decode this.");
+		res.push(null);
+	    } else {
+		// Append to the array.
+		var s = d.decode(data[i]);
+		res.push(s);
+
+		// Attach it by name
+		var name = desc[i].name;
+
+		if (name) {
+		    res[name] = s;
+		}
+	    }
+	};
+
+	return res;
+    };
+
+    PGQuery.prototype.handleSimpleQuery = function () {
+	var that = this;
+
+	return new Promise((resolve, reject) => {
+	    that._resolve = resolve;
+	    that._reject = reject;
+	});
+    };
+
+    PGQuery.prototype.commandComplete = function (e) {
+	var rows = [];
+
+	for (var i = 0; i < this._dataRows.length; i++) {
+	    rows.push(_decodeRow(this._rowDesc, this._dataRows[i]));
+	}
+
+	this._resolve(rows);
+    };
+
+    PGQuery.prototype.rowDescription = function (e) {
+	this._rowDesc = e.detail.fields;
+    };
+
+    PGQuery.prototype.dataRow = function (e) {
+	this._dataRows.push(e.detail);
+    };
+
+    PGQuery.prototype.errorResponse = function (e) {
+	this._reject(e.detail);
+    };
+
+    PGQuery.prototype.noticeResponse = function (e) {
+	this.notice = e.detail;
     };
 
     window.PGConn = PGConn;
