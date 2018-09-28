@@ -287,8 +287,6 @@
     // Authentication Request
     PGConn.prototype._B_R = function (r) {
 	var authType = r.int32();
-
-
 	var event;
 
 	switch (authType) {
