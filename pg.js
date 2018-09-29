@@ -707,10 +707,19 @@
 
 	ws.onerror = function (e) {
 	    console.log("error:", e);
+	    that.conn.socketError();
+
+	    // Zap any open queries.
+	    for (var i = 0; i < that._curQuery; i++) {
+		that._curQuery[i].errorResponse();
+	    }
+
+	    that.curQuery = [];
 	};
 
 	ws.onclose = function (e) {
 	    console.log("close:", e);
+	    that.conn.socketClosed();
 	};
 
 	ws.onmessage = function (e) {
