@@ -496,6 +496,11 @@
 	this.conn.send(packet)
     }
 
+    // PortalSuspended (B)
+    PGConn.prototype._B_s = function () {
+	this.dispatchEvent(new CustomEvent("PortalSuspended"));
+    }
+
     // Query (F)
     PGConn.prototype.query = function (sqlString) {
 	var msg = new MsgWriter("Q");
@@ -630,6 +635,18 @@
 	    }
 
 	    query.commandComplete(e);
+
+	    that._curQuery.shift();
+	});
+
+	conn.addEventListener("PortalSuspended", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.portalSuspended(e);
 
 	    that._curQuery.shift();
 	});
@@ -909,6 +926,10 @@
     };
 
     PGQuery.prototype.commandComplete = function (e) {
+	this._relayRows();
+    };
+
+    PGQuery.prototype.portalSuspended = function (e) {
 	this._relayRows();
     };
 
