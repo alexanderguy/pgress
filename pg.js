@@ -307,6 +307,12 @@
 	var i;
 	var msg = new MsgWriter('B');
 
+	portalName = portalName || "";
+	preparedName = preparedName || "";
+	paramFormats = paramFormats || [];
+	params = params || [];
+	resultFormats = resultFormats || [];
+
 	msg.string(portalName);
 	msg.string(preparedName);
 
