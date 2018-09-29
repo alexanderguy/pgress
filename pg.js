@@ -814,6 +814,30 @@
 	});
     };
 
+    PGQuery.prototype.close = function (closeType) {
+	var query = this;
+
+	return new Promise((resolve, reject) => {
+	    switch (closeType) {
+		case "portal":
+		    closeType = "P";
+		    break;
+		case "statement":
+		    closeType = "S";
+		    break;
+		default:
+		    throw "unknown close type";
+		    return;
+		    break;
+	    }
+
+	    query.parent._newQuery(query);
+	    query.parent.conn.close(closeType, query.name);
+	    query.promises.push([resolve, reject]);
+	    query.parent.conn.flush();
+	});
+    };
+
     PGQuery.prototype.bind = function (paramFormats, params, resultFormats) {
 	var query = this;
 	this._rowDesc = [];
