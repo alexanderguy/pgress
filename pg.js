@@ -52,7 +52,7 @@
 	var stringEnd = buf.indexOf(0, bufOffset);
 
 	if (stringEnd === -1) {
-	    console.log("couldn't find zero termination!");
+	    throw "couldn't find zero termination!";
 	}
 
 	var t = buf.slice(bufOffset, stringEnd);
