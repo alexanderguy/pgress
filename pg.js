@@ -71,7 +71,7 @@
 	this.id = id;
 
 	if (this.id) {
-	    this.uint8(this.id.charCodeAt(0));
+	    this.char8(this.id);
 	}
 
 	// Make space for the size.
@@ -107,6 +107,10 @@
     MsgWriter.prototype.uint8 = function (v) {
 	this.view.setUint8(this.pos, v);
 	this.pos += 1;
+    };
+
+    MsgWriter.prototype.char8 = function (v) {
+	this.uint8(v.charCodeAt(0));
     };
 
     MsgWriter.prototype.finish = function () {
