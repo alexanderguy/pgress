@@ -795,6 +795,9 @@
     PGQuery.prototype.handleSimpleQuery = function () {
 	var query = this;
 
+	this._rowDesc = [];
+	this._dataRows = [];
+
 	return new Promise((resolve, reject) => {
 	    query.parent._newQuery(query);
 	    query.promises.push([resolve, reject]);
@@ -813,6 +816,7 @@
 
     PGQuery.prototype.bind = function (paramFormats, params, resultFormats) {
 	var query = this;
+	this._rowDesc = [];
 
 	return new Promise((resolve, reject) => {
 	    query.parent._newQuery(query);
@@ -824,6 +828,10 @@
 
     PGQuery.prototype.execute = function (nRows) {
 	nRows = nRows || 0;
+
+	// Clear Out Old Data
+	this._dataRows = [];
+
 	var query = this;
 
 	return new Promise((resolve, reject) => {
