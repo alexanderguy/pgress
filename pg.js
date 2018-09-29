@@ -190,6 +190,14 @@
 	this.conn = sock;
     };
 
+    PGConn.prototype.socketClosed = function () {
+	this.conn = undefined;
+    };
+
+    PGConn.prototype.socketError = function () {
+	this.conn = undefined;
+    };
+
     PGConn.prototype.recv = function (incoming) {
 	// Merge the incoming data into the existing buffer.
 	var newBuf = new ArrayBuffer(this.buf.byteLength + incoming.byteLength);
