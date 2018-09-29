@@ -61,4 +61,24 @@ pg.connect().then(() => {
       .catch((err) => {
 	  console.log("we got an error:", err);
       });
+
+    var q2 = pg.extendedQuery("");
+    q2.parse("select * from testing")
+      .then((res) => {
+	  return q2.bind();
+      })
+      .then((res) => {
+	  return q2.execute(1);
+      })
+      .then((res) => {
+	  console.log("got some results:", res);
+	  return q2.execute(2);
+      })
+      .then((res) => {
+	  console.log("got some results:", res);
+      })
+      .catch((err) => {
+	  console.log("we got an error:", err);
+	  pg.terminate();
+      });
 });
