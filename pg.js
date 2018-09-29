@@ -654,7 +654,6 @@
 	    that._curQuery.shift();
 	});
     };
-    PGState.prototype._newQuery
 
     PGState.prototype.connect = function () {
 	var ws = new WebSocket(this.url, "binary");
