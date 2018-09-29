@@ -862,9 +862,6 @@
     PGQuery.prototype.execute = function (nRows) {
 	nRows = nRows || 0;
 
-	// Clear Out Old Data
-	this._dataRows = [];
-
 	var query = this;
 
 	return new Promise((resolve, reject) => {
@@ -892,7 +889,7 @@
 	query.promises.shift()[0]();
     };
 
-    PGQuery.prototype.commandComplete = function (e) {
+    PGQuery.prototype._relayRows = function() {
 	var query = this;
 	var rows = [];
 
@@ -901,6 +898,16 @@
 	}
 	// XXX - This only makes sense for a simple query.
 	query.promises.shift()[0](rows);
+
+	this._dataRows = [];
+    };
+
+    PGQuery.prototype.commandComplete = function (e) {
+	this._relayRows();
+    };
+
+    PGQuery.prototype.emptyQueryResponse = function (e) {
+	this._relayRows();
     };
 
     PGQuery.prototype.rowDescription = function (e) {
@@ -912,8 +919,8 @@
     };
 
     PGQuery.prototype.errorResponse = function (e) {
-	var query = this;
-	query.promises.shift()[1](e.detail);
+	this._dataRows = [];
+	this.promises.shift()[1](e.detail);
     };
 
     PGQuery.prototype.noticeResponse = function (e) {
