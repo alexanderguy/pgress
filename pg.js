@@ -349,6 +349,22 @@
 	this.dispatchEvent(new CustomEvent("BindComplete"));
     }
 
+    // Close (F)
+    PGConn.prototype.close = function (closeType, name) {
+	var msg = new MsgWriter("C");
+	msg.char8(closeType);
+	msg.string(name);
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
+    // CloseComplete (B)
+    PGConn.prototype._B_3 = function (reader) {
+	var event = new CustomEvent("CloseComplete")
+	this.dispatchEvent(event)
+    };
+
     // CommandComplete (B)
     PGConn.prototype._B_C = function (reader) {
 	var tag = reader.string()
@@ -588,6 +604,18 @@
 	    conn.passwordMessage(that.user, e.detail.salt, that.password);
 	});
 
+	conn.addEventListener("CloseComplete", function (e) {
+	    var query = _getQuery();
+
+	    if (!query) {
+		return;
+	    }
+
+	    query.closeComplete(e);
+
+	    that._curQuery.shift();
+	});
+
 	conn.addEventListener("CommandComplete", function (e) {
 	    var query = _getQuery();
 
@@ -813,6 +841,11 @@
 
 	query.promises.shift()[0]();
     }
+
+    PGQuery.prototype.closeComplete = function (e) {
+	var query = this;
+	query.promises.shift()[0]();
+    };
 
     PGQuery.prototype.commandComplete = function (e) {
 	var query = this;
