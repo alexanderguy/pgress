@@ -535,6 +535,20 @@
 	this.conn.send(packet);
     };
 
+    // Sync (F)
+    PGConn.prototype.terminate = function () {
+	var msg = new MsgWriter("S");
+	var packet = msg.finish();
+	this.conn.send(packet);
+    }
+
+    // Terminate (F)
+    PGConn.prototype.terminate = function () {
+	var msg = new MsgWriter("X");
+	var packet = msg.finish();
+	this.conn.send(packet);
+    }
+
     // State Handler For Postgres Connections
     var PGState = function (url, database, user, password) {
 	this.url = url;
