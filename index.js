@@ -21,18 +21,44 @@ pg.connect().then(() => {
 	console.log("we got an error:", err);
     });
 
-    var q = pg.extendedQuery("");
-    q.parse("select now()", [])
-     .then((res) => {
-	 return q.bind([], [], []);
-     })
-     .then((res) => {
-	 return q.execute();
-     })
-     .then((res) => {
-	 console.log("got some results:", res);
-     })
-     .catch((err) => {
-	 console.log("we got an error:", err);
-     });
+    var q1 = pg.extendedQuery("goonies");
+    console.log("parsing");
+    q1.parse("select $1")
+      .then((res) => {
+	  return q1.bind([], ["hey"], []);
+      })
+      .then((res) => {
+	  return q1.execute();
+      })
+      .then((res) => {
+	  console.log("got some results:", res);
+      })
+      .then(() => {
+	  return q1.close("portal");
+      })
+      .then(() => {
+	  return q1.bind([], ["you"], []);
+      })
+      .then((res) => {
+	  return q1.execute();
+      })
+      .then((res) => {
+	  console.log("got some results:", res);
+      })
+      .then(() => {
+	  return q1.close("portal");
+      })
+      .then(() => {
+	  return q1.bind([], ["guys"], []);
+      })
+      .then((res) => {
+	  return q1.execute();
+      })
+      .then((res) => {
+	  console.log("got some results:", res);
+	  return pg.terminate();
+      })
+      .catch((err) => {
+	  console.log("we got an error:", err);
+      });
 });
