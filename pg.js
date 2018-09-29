@@ -742,6 +742,10 @@
 	return h;
     };
 
+    PGState.prototype.terminate = function () {
+	this.conn.terminate();
+    };
+
     var PGQuery = function (parent, name) {
 	this.parent = parent;
 	this.name = name || "";
