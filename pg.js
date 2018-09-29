@@ -247,44 +247,7 @@
 	}
     };
 
-    // EmptyQueryResponse
-    PGConn.prototype._B_I = function (r) {
-	this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
-    };
-
-    // ErrorResponse
-    PGConn.prototype._B_E = function (r) {
-	var errors = [];
-
-	while (r.view.getUint8(r.pos) != 0) {
-	    errors.push({code: r.char8(), msg: r.string()});
-	}
-
-	this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
-    }
-
-    // Execute (F)
-    PGConn.prototype.execute = function (portal, nRows) {
-	if (!nRows) {
-	    nRows = 0;
-	}
-
-	var msg = new MsgWriter("E");
-	msg.string(portal);
-	msg.int32(nRows);
-
-	var packet = msg.finish();
-	this.conn.send(packet);
-    };
-
-    // Flush (F)
-    PGConn.prototype.flush = function () {
-	var msg = new MsgWriter("H");
-	var packet = msg.finish();
-	this.conn.send(packet);
-    }
-
-    // Authentication Request
+    // AuthenticationOk (B) / AuthenticationMD5Password (B)
     PGConn.prototype._B_R = function (r) {
 	var authType = r.int32();
 	var event;
@@ -295,7 +258,6 @@
 		event = new CustomEvent("AuthenticationOk");
 		break;
 	    case 5:
-
 		// MD5 Password Request
 		if (r.left() != 4) {
 		    console.log("message size not what is expected.");
@@ -318,28 +280,7 @@
 	this.dispatchEvent(event);
     }
 
-    // NoticeResponse
-    PGConn.prototype._B_N = function (reader) {
-	var notices = [];
-
-	while (r.view.getUint8(r.pos) != 0) {
-	    notices.push({code: r.char8(), msg: r.string()});
-	}
-
-	this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
-    };
-
-    // ParameterStatus
-    PGConn.prototype._B_S = function (reader) {
-	var param = {
-	    name: reader.string(),
-	    value: reader.string()
-	};
-
-	this.dispatchEvent(new CustomEvent("ParameterStatus", {detail: param}));
-    }
-
-    // BackendKeyData
+    // BackendKeyData (B)
     PGConn.prototype._B_K = function (reader) {
 	var keyData = {
 	    processId: reader.int32(),
@@ -396,6 +337,87 @@
 	this.dispatchEvent(new CustomEvent("BindComplete"));
     }
 
+    // CommandComplete (B)
+    PGConn.prototype._B_C = function (reader) {
+	var tag = reader.string()
+	var event = new CustomEvent("CommandComplete")
+	this.dispatchEvent(event)
+    };
+
+    // DataRow (B)
+    PGConn.prototype._B_D = function (reader) {
+	var nCols = reader.int16();
+	var cols = [];
+
+	for (var i = 0; i < nCols; i++) {
+	    var nBytes = reader.int32();
+	    cols.push(reader.uint8array(nBytes));
+	}
+
+	var event = new CustomEvent("DataRow", {
+	    detail: cols
+	});
+	this.dispatchEvent(event);
+    }
+
+    // EmptyQueryResponse (B)
+    PGConn.prototype._B_I = function (r) {
+	this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
+    };
+
+    // ErrorResponse (B)
+    PGConn.prototype._B_E = function (r) {
+	var errors = [];
+
+	while (r.view.getUint8(r.pos) != 0) {
+	    errors.push({code: r.char8(), msg: r.string()});
+	}
+
+	this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
+    }
+
+    // Execute (F)
+    PGConn.prototype.execute = function (portal, nRows) {
+	if (!nRows) {
+	    nRows = 0;
+	}
+
+	var msg = new MsgWriter("E");
+	msg.string(portal);
+	msg.int32(nRows);
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
+    // Flush (F)
+    PGConn.prototype.flush = function () {
+	var msg = new MsgWriter("H");
+	var packet = msg.finish();
+	this.conn.send(packet);
+    }
+
+    // NoticeResponse (B)
+    PGConn.prototype._B_N = function (reader) {
+	var notices = [];
+
+	while (r.view.getUint8(r.pos) != 0) {
+	    notices.push({code: r.char8(), msg: r.string()});
+	}
+
+	this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
+    };
+
+    // ParameterStatus (B)
+    PGConn.prototype._B_S = function (reader) {
+	var param = {
+	    name: reader.string(),
+	    value: reader.string()
+	};
+
+	this.dispatchEvent(new CustomEvent("ParameterStatus", {detail: param}));
+    }
+
     // Parse (F)
     PGConn.prototype.parse = function (name, sqlQuery, paramTypes) {
 	if (!name) {
@@ -424,7 +446,7 @@
 	this.dispatchEvent(new CustomEvent("ParseComplete"));
     }
 
-    // PasswordMessage
+    // PasswordMessage (F)
     PGConn.prototype.passwordMessage = function (user, salt, password) {
 	var passHash = md5.hex(password + user);
 	var hashRes = md5.create();
@@ -440,7 +462,16 @@
 	this.conn.send(packet)
     }
 
-    // ReadyForQuery
+    // Query (F)
+    PGConn.prototype.query = function (sqlString) {
+	var msg = new MsgWriter("Q");
+	msg.string(sqlString);
+
+	var packet = msg.finish();
+	this.conn.send(packet);
+    };
+
+    // ReadyForQuery (B)
     PGConn.prototype._B_Z = function (reader) {
 	var status = reader.char8();
 	var event = new CustomEvent("ReadyForQuery", {
@@ -452,7 +483,7 @@
 	this.dispatchEvent(event);
     };
 
-    // RowDescription
+    // RowDescription (B)
     PGConn.prototype._B_T = function (reader) {
 	var fields = [];
 	var nFields = reader.int16();
@@ -486,38 +517,7 @@
 	this.dispatchEvent(event);
     };
 
-    // DataRow
-    PGConn.prototype._B_D = function (reader) {
-	var nCols = reader.int16();
-	var cols = [];
-
-	for (var i = 0; i < nCols; i++) {
-	    var nBytes = reader.int32();
-	    cols.push(reader.uint8array(nBytes));
-	}
-
-	var event = new CustomEvent("DataRow", {
-	    detail: cols
-	});
-	this.dispatchEvent(event);
-    }
-
-    // CommandComplete
-    PGConn.prototype._B_C = function (reader) {
-	var tag = reader.string()
-	var event = new CustomEvent("CommandComplete")
-	this.dispatchEvent(event)
-    };
-
-    PGConn.prototype.query = function (sqlString) {
-	var msg = new MsgWriter("Q");
-	msg.string(sqlString);
-
-	var packet = msg.finish();
-	this.conn.send(packet);
-    };
-
-    // StartupMessage
+    // StartupMessage (F)
     PGConn.prototype.startupMessage = function (params) {
 	var msg = new MsgWriter();
 
