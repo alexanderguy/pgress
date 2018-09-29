@@ -564,7 +564,7 @@
     };
 
     // Sync (F)
-    PGConn.prototype.terminate = function () {
+    PGConn.prototype.sync = function () {
 	var msg = new MsgWriter("S");
 	var packet = msg.finish();
 	this.conn.send(packet);
