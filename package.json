@@ -1,0 +1,11 @@
+{
+    "main": "src/main.js",
+    "module": "dist/pg.js",
+    "devDependencies": {
+        "webpack": "^4.20.2",
+        "webpack-cli": "^3.1.2"
+    },
+    "dependencies": {
+        "md5.js": "^1.3.4"
+    }
+}
