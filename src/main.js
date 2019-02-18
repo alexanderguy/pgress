@@ -784,6 +784,11 @@ PGState.prototype.extendedQuery = function (name) {
     return h;
 };
 
+PGState.prototype.preparedStatement = function (name) {
+    var h = new _PreparedStatement(this, name);
+    return h;
+};
+
 PGState.prototype.terminate = function () {
     this.conn.terminate();
 };
@@ -964,4 +969,145 @@ PGQuery.prototype.noticeResponse = function (e) {
     // What to do here?
 };
 
+var _Portal = function (state, portalName, statementName) {
+    this.promises = [];
 
+    this.state = state;
+    this.portalName = portalName || "";
+    this.statementName = statementName;
+
+    this._dataRows = [];
+};
+
+_Portal.prototype.bind = function (paramFormats, params, resultFormats) {
+    var query = this;
+    this._rowDesc = [];
+
+    return new Promise((resolve, reject) => {
+	query.state._newQuery(query);
+	query.promises.push([resolve, reject]);
+	query.state.conn.bind(query.portalName, query.statementName, paramFormats, params, resultFormats);
+	query.state.conn.flush();
+    });
+};
+
+_Portal.prototype.bindComplete = function (e) {
+    var query = this;
+
+    query.promises.shift()[0]();
+}
+
+_Portal.prototype.execute = function (nRows) {
+    nRows = nRows || 0;
+
+    var query = this;
+
+    return new Promise((resolve, reject) => {
+	query.state._newQuery(query);
+	query.promises.push([resolve, reject]);
+	query.state.conn.execute(query.portalName, nRows);
+	query.state.conn.flush();
+    });
+};
+
+_Portal.prototype._relayRows = function() {
+    var query = this;
+    var rows = [];
+
+    for (var i = 0; i < this._dataRows.length; i++) {
+	rows.push(_decodeRow(this._rowDesc, this._dataRows[i]));
+    }
+    // XXX - This only makes sense for a simple query.
+    query.promises.shift()[0](rows);
+
+    this._dataRows = [];
+};
+
+_Portal.prototype.commandComplete = function (e) {
+    this._relayRows();
+};
+
+_Portal.prototype.portalSuspended = function (e) {
+    this._relayRows();
+};
+
+_Portal.prototype.emptyQueryResponse = function (e) {
+    this._relayRows();
+};
+
+_Portal.prototype.rowDescription = function (e) {
+    this._rowDesc = e.detail.fields;
+};
+
+_Portal.prototype.dataRow = function (e) {
+    this._dataRows.push(e.detail);
+};
+
+_Portal.prototype.errorResponse = function (e) {
+    this._dataRows = [];
+    this.promises.shift()[1](e.detail);
+};
+
+_Portal.prototype.noticeResponse = function (e) {
+    // What to do here?
+};
+
+_Portal.prototype.close = function (closeType) {
+    var query = this;
+
+    return new Promise((resolve, reject) => {
+	query.state._newQuery(query);
+	query.promises.push([resolve, reject]);
+	query.state.conn.close("P", query.portalName);
+	query.state.conn.flush();
+    });
+};
+
+_Portal.prototype.closeComplete = function (e) {
+    var query = this;
+    query.promises.shift()[0]();
+};
+
+var _PreparedStatement = function (state, name) {
+    this.promises = [];
+
+    this.state = state;
+    this.name = name || "";
+};
+
+_PreparedStatement.prototype.parse = function(sqlQuery, paramTypes) {
+    var query = this;
+    return new Promise((resolve, reject) => {
+	query.state._newQuery(query);
+	query.promises.push([resolve, reject]);
+	query.state.conn.parse(query.name, sqlQuery, paramTypes);
+	query.state.conn.flush();
+    });
+};
+
+_PreparedStatement.prototype.parseComplete = function (e) {
+    var query = this;
+
+    query.promises.shift()[0]();
+};
+
+_PreparedStatement.prototype.portal = function(name) {
+    var portal = new _Portal(this.state, name, this.name);
+    return portal;
+};
+
+_PreparedStatement.prototype.close = function (closeType) {
+    var query = this;
+
+    return new Promise((resolve, reject) => {
+	query.state._newQuery(query);
+	query.promises.push([resolve, reject]);
+	query.state.conn.close("S", query.name);
+	query.state.conn.flush();
+    });
+};
+
+_PreparedStatement.prototype.closeComplete = function (e) {
+    var query = this;
+    query.promises.shift()[0]();
+};
