@@ -788,17 +788,6 @@ PGState.prototype.terminate = function () {
     this.conn.terminate();
 };
 
-var PGQuery = function (parent, name) {
-    this.parent = parent;
-    this.name = name || "";
-
-    this.promises = [];
-
-    this._rowDesc = [];
-    this._dataRows = [];
-    this.notice = undefined;
-};
-
 var _decodeRow = function (desc, data) {
     var res = [];
     var d = new TextDecoder("utf-8");
@@ -832,6 +821,17 @@ var _decodeRow = function (desc, data) {
     };
 
     return res;
+};
+
+var PGQuery = function (parent, name) {
+    this.parent = parent;
+    this.name = name || "";
+
+    this.promises = [];
+
+    this._rowDesc = [];
+    this._dataRows = [];
+    this.notice = undefined;
 };
 
 PGQuery.prototype.handleSimpleQuery = function () {
