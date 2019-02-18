@@ -725,8 +725,17 @@ PGState.prototype.connect = function () {
     this.conn.attachSocket(ws);
 
     var that = this;
+
+    var startupParams = {
+	user: that.user
+    };
+
+    if (that.database) {
+	startupParams.database = that.database;
+    }
+
     ws.onopen = function (e) {
-	that.conn.startupMessage({user: that.user});
+	that.conn.startupMessage(startupParams);
     };
 
     ws.onerror = function (e) {
