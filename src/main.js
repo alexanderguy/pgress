@@ -850,8 +850,8 @@ PGQuery.prototype.parse = function(sqlQuery, paramTypes) {
     var query = this;
     return new Promise((resolve, reject) => {
 	query.parent._newQuery(query);
-	query.parent.conn.parse(query.name, sqlQuery, paramTypes);
 	query.promises.push([resolve, reject]);
+	query.parent.conn.parse(query.name, sqlQuery, paramTypes);
 	query.parent.conn.flush();
     });
 };
@@ -874,8 +874,8 @@ PGQuery.prototype.close = function (closeType) {
 	}
 
 	query.parent._newQuery(query);
-	query.parent.conn.close(closeType, query.name);
 	query.promises.push([resolve, reject]);
+	query.parent.conn.close(closeType, query.name);
 	query.parent.conn.flush();
     });
 };
@@ -886,8 +886,8 @@ PGQuery.prototype.bind = function (paramFormats, params, resultFormats) {
 
     return new Promise((resolve, reject) => {
 	query.parent._newQuery(query);
-	query.parent.conn.bind(query.name, query.name, paramFormats, params, resultFormats);
 	query.promises.push([resolve, reject]);
+	query.parent.conn.bind(query.name, query.name, paramFormats, params, resultFormats);
 	query.parent.conn.flush();
     });
 };
@@ -899,8 +899,8 @@ PGQuery.prototype.execute = function (nRows) {
 
     return new Promise((resolve, reject) => {
 	query.parent._newQuery(query);
-	query.parent.conn.execute(query.name, nRows);
 	query.promises.push([resolve, reject]);
+	query.parent.conn.execute(query.name, nRows);
 	query.parent.conn.flush();
     });
 };
