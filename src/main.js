@@ -772,19 +772,12 @@ PGState.prototype._newQuery = function (query) {
 };
 
 PGState.prototype.simpleQuery = function (query) {
-    var h = new PGQuery(this);
+    var h = new _SimpleQuery(this);
 
-    this.conn.query(query);
-
-    return h.handleSimpleQuery();
+    return h.query(query);
 };
 
 PGState.prototype.extendedQuery = function (name) {
-    var h = new PGQuery(this, name);
-    return h;
-};
-
-PGState.prototype.preparedStatement = function (name) {
     var h = new _PreparedStatement(this, name);
     return h;
 };
@@ -828,106 +821,25 @@ var _decodeRow = function (desc, data) {
     return res;
 };
 
-var PGQuery = function (parent, name) {
-    this.parent = parent;
-    this.name = name || "";
+var _SimpleQuery = function (state) {
+    this.state = state;
 
     this.promises = [];
-
     this._rowDesc = [];
     this._dataRows = [];
-    this.notice = undefined;
 };
 
-PGQuery.prototype.handleSimpleQuery = function () {
+_SimpleQuery.prototype.query = function (queryString) {
     var query = this;
-
-    this._rowDesc = [];
-    this._dataRows = [];
-
     return new Promise((resolve, reject) => {
-	query.parent._newQuery(query);
+	query.state._newQuery(query);
 	query.promises.push([resolve, reject]);
+	query.state.conn.query(queryString);
+	query.state.conn.flush();
     });
 };
 
-PGQuery.prototype.parse = function(sqlQuery, paramTypes) {
-    var query = this;
-    return new Promise((resolve, reject) => {
-	query.parent._newQuery(query);
-	query.promises.push([resolve, reject]);
-	query.parent.conn.parse(query.name, sqlQuery, paramTypes);
-	query.parent.conn.flush();
-    });
-};
-
-PGQuery.prototype.close = function (closeType) {
-    var query = this;
-
-    return new Promise((resolve, reject) => {
-	switch (closeType) {
-	    case "portal":
-		closeType = "P";
-		break;
-	    case "statement":
-		closeType = "S";
-		break;
-	    default:
-		throw "unknown close type";
-		return;
-		break;
-	}
-
-	query.parent._newQuery(query);
-	query.promises.push([resolve, reject]);
-	query.parent.conn.close(closeType, query.name);
-	query.parent.conn.flush();
-    });
-};
-
-PGQuery.prototype.bind = function (paramFormats, params, resultFormats) {
-    var query = this;
-    this._rowDesc = [];
-
-    return new Promise((resolve, reject) => {
-	query.parent._newQuery(query);
-	query.promises.push([resolve, reject]);
-	query.parent.conn.bind(query.name, query.name, paramFormats, params, resultFormats);
-	query.parent.conn.flush();
-    });
-};
-
-PGQuery.prototype.execute = function (nRows) {
-    nRows = nRows || 0;
-
-    var query = this;
-
-    return new Promise((resolve, reject) => {
-	query.parent._newQuery(query);
-	query.promises.push([resolve, reject]);
-	query.parent.conn.execute(query.name, nRows);
-	query.parent.conn.flush();
-    });
-};
-
-PGQuery.prototype.parseComplete = function (e) {
-    var query = this;
-
-    query.promises.shift()[0]();
-}
-
-PGQuery.prototype.bindComplete = function (e) {
-    var query = this;
-
-    query.promises.shift()[0]();
-}
-
-PGQuery.prototype.closeComplete = function (e) {
-    var query = this;
-    query.promises.shift()[0]();
-};
-
-PGQuery.prototype._relayRows = function() {
+_SimpleQuery.prototype._relayRows = function() {
     var query = this;
     var rows = [];
 
@@ -940,32 +852,32 @@ PGQuery.prototype._relayRows = function() {
     this._dataRows = [];
 };
 
-PGQuery.prototype.commandComplete = function (e) {
+_SimpleQuery.prototype.commandComplete = function (e) {
     this._relayRows();
 };
 
-PGQuery.prototype.portalSuspended = function (e) {
+_SimpleQuery.prototype.portalSuspended = function (e) {
     this._relayRows();
 };
 
-PGQuery.prototype.emptyQueryResponse = function (e) {
+_SimpleQuery.prototype.emptyQueryResponse = function (e) {
     this._relayRows();
 };
 
-PGQuery.prototype.rowDescription = function (e) {
+_SimpleQuery.prototype.rowDescription = function (e) {
     this._rowDesc = e.detail.fields;
 };
 
-PGQuery.prototype.dataRow = function (e) {
+_SimpleQuery.prototype.dataRow = function (e) {
     this._dataRows.push(e.detail);
 };
 
-PGQuery.prototype.errorResponse = function (e) {
+_SimpleQuery.prototype.errorResponse = function (e) {
     this._dataRows = [];
     this.promises.shift()[1](e.detail);
 };
 
-PGQuery.prototype.noticeResponse = function (e) {
+_SimpleQuery.prototype.noticeResponse = function (e) {
     // What to do here?
 };
 
