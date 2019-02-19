@@ -1,3 +1,4 @@
+var log = require("loglevel");
 var md5 = require('./md5.js');
 
 function MsgReader(view) {
@@ -150,7 +151,7 @@ PGConn.prototype.addEventListener = function (eventType, f) {
 PGConn.prototype.dispatchEvent = function (event) {
     var eventType = event.type.toLowerCase();
 
-    // console.log("event type is:", eventType, event);
+    log.debug("event type is:", eventType, event);
 
     var handlers = this._events[eventType];
 
@@ -219,7 +220,7 @@ PGConn.prototype.recv = function (incoming) {
 	}
 
 	if (this.buf.byteLength < 5) {
-	    console.log("waiting for more data, we don't have enough to parse the message header.");
+	    log.debug("waiting for more data, we don't have enough to parse the message header.");
 	    done = true
 	    continue;
 	}
@@ -227,7 +228,7 @@ PGConn.prototype.recv = function (incoming) {
 	var view = new DataView(this.buf);
 	var byteLength = view.getInt32(1);
 	if (this.buf.byteLength < (byteLength + 1)) {
-	    console.log("we got length, but it's not enough", this.buf.byteLength, byteLength + 1);
+	    log.debug("we got length, but it's not enough", this.buf.byteLength, byteLength + 1);
 	    done = true;
 	    continue
 	}
@@ -243,7 +244,7 @@ PGConn.prototype._dispatchMsg = function (buf) {
     var view = new DataView(buf);
 
     if (0) {
-	console.log("got message:", new Uint8Array(buf));
+	log.debug("got message:", new Uint8Array(buf));
     }
 
     var r = new MsgReader(view);
@@ -255,8 +256,8 @@ PGConn.prototype._dispatchMsg = function (buf) {
     if (handler) {
 	handler.call(this, r);
     } else {
-	console.log("unknown message code:", msgCode);
-	console.log(new Uint8Array(buf));
+	log.warn("unknown message code:", msgCode);
+	log.warn(new Uint8Array(buf));
     }
 };
 
@@ -273,7 +274,7 @@ PGConn.prototype._B_R = function (r) {
 	case 5:
 	    // MD5 Password Request
 	    if (r.left() != 4) {
-		console.log("message size not what is expected.");
+		log.error("message size not what is expected.");
 		return;
 	    }
 
@@ -285,7 +286,7 @@ PGConn.prototype._B_R = function (r) {
 	    event = new CustomEvent("AuthenticationMD5Password", { detail: detail });
 	    break;
 	default:
-	    console.log("unknown authentication message for code:", authType);
+	    log.error("unknown authentication message for code:", authType);
 	    event = new ErrorEvent("error", { message: "unknown authentication message" });
 	    break;
     }
@@ -609,7 +610,7 @@ export var PGState = function (url, database, user, password) {
 
     var _getQuery = function () {
 	if (that._curQuery.length < 1) {
-	    console.log("got a command complete, but there's no running query to proxy to?");
+	    log.warn("got a command complete, but there's no running query to proxy to?");
 	    return undefined;
 	}
 
@@ -743,7 +744,7 @@ PGState.prototype.connect = function () {
     };
 
     ws.onerror = function (e) {
-	console.log("error:", e);
+	log.error("error:", e);
 	that.conn.socketError();
 
 	// Zap any open queries.
@@ -755,7 +756,7 @@ PGState.prototype.connect = function () {
     };
 
     ws.onclose = function (e) {
-	console.log("close:", e);
+	log.error("close:", e);
 	that.conn.socketClosed();
     };
 
@@ -808,7 +809,7 @@ var _decodeRow = function (desc, data) {
 
 	if (format != "text") {
 	    // XXX - What do we do here?
-	    console.log("we have no idea how to decode this.");
+	    log.warn("we have no idea how to decode this.");
 	    res.push(null);
 	} else {
 	    // Append to the array.
