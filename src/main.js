@@ -386,7 +386,11 @@ PGConn.prototype._B_D = function (reader) {
 
     for (var i = 0; i < nCols; i++) {
 	var nBytes = reader.int32();
-	cols.push(reader.uint8array(nBytes));
+	if (nBytes == -1 ) {
+	    cols.push(null);
+	} else {
+	    cols.push(reader.uint8array(nBytes));
+	}
     }
 
     var event = new CustomEvent("DataRow", {
@@ -808,8 +812,12 @@ var _decodeRow = function (desc, data) {
 	    res.push(null);
 	} else {
 	    // Append to the array.
-	    var s = d.decode(data[i]);
-	    res.push(s);
+	    if (data[i] == null) {
+		res.push(null);
+	    } else {
+		var s = d.decode(data[i]);
+		res.push(s);
+	    }
 
 	    // Attach it by name
 	    if (name) {
