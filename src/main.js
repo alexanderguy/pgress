@@ -771,36 +771,53 @@ var _decodeRow = function (desc, data) {
     var res = [];
     var d = new TextDecoder("utf-8");
 
+    // XXX - This should be generated automatically.
+    var oidConversion = {
+	114: (v) => JSON.parse(v),
+	3802: (v) => JSON.parse(v)
+    };
+
     for (var i = 0; i < data.length; i++) {
-	var format, name;
+	var s = data[i]
 
-	if (i < desc.length) {
-	    format = desc[i].format;
-	    name = desc[i].name;
-	}
+	// If there's data, let's process it.
+	if (s != null) {
+	    var colInfo;
 
-	if (!desc.format) {
-	    format = "text";
-	}
-
-	if (format != "text") {
-	    // XXX - What do we do here?
-	    log.warn("we have no idea how to decode this.");
-	    res.push(null);
-	} else {
-	    // Append to the array.
-	    if (data[i] == null) {
-		res.push(null);
+	    if (i < desc.length) {
+		colInfo = desc[i];
 	    } else {
-		var s = d.decode(data[i]);
-		res.push(s);
+		log.warn("no column information available, assuming text.");
+		colInfo = {
+		    format: "text"
+		};
 	    }
 
-	    // Attach it by name
-	    if (name) {
-		res[name] = s;
+	    // We Have A Text Field
+	    if (colInfo.format == "text") {
+		// Turn this into UTF-8
+		s = d.decode(s);
+
+		// Convert the data to something we like to use.
+		if (colInfo.oid != undefined) {
+		    var m = oidConversion[colInfo.oid];
+
+		    if (m != undefined) {
+			s = m(s)
+		    }
+		}
+
+		// Attach it by name
+		if (colInfo.name) {
+		    res[colInfo.name] = s;
+		}
+	    } else {
+		log.warn("null'ing collumn, because we don't know how to decode format: ", colInfo.format)
+		s = null;
 	    }
 	}
+
+	res.push(s)
     };
 
     return res;
