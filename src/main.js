@@ -792,10 +792,33 @@ PGState.prototype.simpleQuery = function (query) {
     return h.query(query);
 };
 
-PGState.prototype.extendedQuery = function (name) {
+PGState.prototype.preparedStatement = function (name) {
     var h = new _PreparedStatement(this, name);
     return h;
 };
+
+PGState.prototype.extendedQuery = function () {
+    var args = Array.prototype.slice.call(arguments);
+    var query = args.shift();
+
+    var s = this.preparedStatement();
+    var p, results;
+
+    return s.parse(query).then(() => {
+	p = s.portal();
+	p.bind([], args, []);
+    }).then(() => {
+	return p.execute()
+    }).then((res) => {
+	results = res;
+	return p.close();
+    }).then(() => {
+	return s.close()
+    }).then(() => {
+	return results;
+    });
+};
+
 
 PGState.prototype.terminate = function () {
     this.conn.terminate();
