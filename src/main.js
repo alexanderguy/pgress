@@ -400,6 +400,16 @@ PGConn.prototype._B_D = function (reader) {
     this.dispatchEvent(event);
 }
 
+// Describe (F)
+PGConn.prototype.describe = function (descType, name) {
+    var msg = new MsgWriter("D");
+    msg.char8(descType);
+    msg.string(name);
+
+    var packet = msg.finish();
+    this.conn.send(packet);
+};
+
 // EmptyQueryResponse (B)
 PGConn.prototype._B_I = function (r) {
     this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
