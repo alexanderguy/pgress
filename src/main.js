@@ -773,6 +773,11 @@ var _decodeRow = function (desc, data) {
 
     // XXX - This should be generated automatically.
     var oidConversion = {
+	20: (v) => parseInt(v),
+	21: (v) => parseInt(v),
+	22: (v) => parseInt(v),
+	700: (v) => parseFloat(v),
+	701: (v) => parseFloat(v),
 	114: (v) => JSON.parse(v),
 	3802: (v) => JSON.parse(v)
     };
