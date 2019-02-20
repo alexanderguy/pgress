@@ -1042,3 +1042,7 @@ _PreparedStatement.prototype.closeComplete = function (e) {
     var query = this;
     query.promises.shift()[0]();
 };
+
+_PreparedStatement.prototype.errorResponse = function (e) {
+    this.promises.shift()[1](e.detail);
+};
