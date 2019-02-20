@@ -826,16 +826,16 @@ _SimpleQuery.prototype.commandComplete = function (e) {
     this._relayRows();
 };
 
-_SimpleQuery.prototype.emptyQueryResponse = function (e) {
-    this._relayRows();
-};
-
 _SimpleQuery.prototype.rowDescription = function (e) {
     this._rowDesc = e.detail.fields;
 };
 
 _SimpleQuery.prototype.dataRow = function (e) {
     this._dataRows.push(e.detail);
+};
+
+_SimpleQuery.prototype.emptyQueryResponse = function (e) {
+    this._relayRows();
 };
 
 _SimpleQuery.prototype.errorResponse = function (e) {
