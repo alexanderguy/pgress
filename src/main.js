@@ -618,6 +618,19 @@ export var PGState = function (url, database, user, password) {
     var conn = this.conn;
     var that = this;
 
+    var nameCount = 0;
+
+    this._checkName = function (nameType, name) {
+	if (name || name === "") {
+	    return name;
+	}
+
+	name = nameType + "-" + nameCount;
+
+	nameCount += 1;
+	return name;
+    };
+
     var _getQuery = function () {
 	if (that._curQuery.length < 1) {
 	    log.warn("got a command complete, but there's no running query to proxy to?");
@@ -851,7 +864,7 @@ var _Portal = function (state, portalName, statementName) {
     this.promises = [];
 
     this.state = state;
-    this.portalName = portalName || "";
+    this.portalName = state._checkName("portal", portalName);
     this.statementName = statementName;
 
     this._dataRows = [];
@@ -941,7 +954,7 @@ var _PreparedStatement = function (state, name) {
     this.promises = [];
 
     this.state = state;
-    this.name = name || "";
+    this.name = state._checkName("statement", name);
 };
 
 _PreparedStatement.prototype.parse = function(sqlQuery, paramTypes) {
