@@ -826,10 +826,6 @@ _SimpleQuery.prototype.commandComplete = function (e) {
     this._relayRows();
 };
 
-_SimpleQuery.prototype.portalSuspended = function (e) {
-    this._relayRows();
-};
-
 _SimpleQuery.prototype.emptyQueryResponse = function (e) {
     this._relayRows();
 };
