@@ -891,6 +891,10 @@ _Portal.prototype.execute = function (nRows) {
     return new Promise((resolve, reject) => {
 	this.state._newQuery(this);
 	this.promises.push([resolve, reject]);
+	// XXX - This should happen once, right after the bind, not here.
+	// I'm putting it here because of the way we're currently proxying
+	// events.  It's not great, but it works.
+	this.state.conn.describe("P", this.portalName);
 	this.state.conn.execute(this.portalName, nRows);
 	this.state.conn.flush();
     });
