@@ -631,107 +631,37 @@ export var PGState = function (url, database, user, password) {
 	conn.passwordMessage(that.user, e.detail.salt, that.password);
     });
 
-    conn.addEventListener("CloseComplete", function (e) {
-	var query = _getQuery();
+    var _proxyEvent = (eventName, methodName, final) => {
+	conn.addEventListener(eventName, (e) => {
+	    if (that._curQuery.length < 1) {
+		log.error("no query to receive event: ", eventName);
+	    }
 
-	if (!query) {
-	    return;
-	}
+	    var query = that._curQuery[0];
+	    var m = query[methodName];
 
-	query.closeComplete(e);
+	    if (m) {
+		m.call(query, e);
+	    } else {
+		log.warn("query object missing handle for event: ", eventName);
+	    }
 
-	that._curQuery.shift();
-    });
+	    if (final) {
+		that._curQuery.shift();
+	    }
+	});
+    };
 
-    conn.addEventListener("CommandComplete", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.commandComplete(e);
-
-	that._curQuery.shift();
-    });
-
-    conn.addEventListener("PortalSuspended", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.portalSuspended(e);
-
-	that._curQuery.shift();
-    });
-
-    conn.addEventListener("RowDescription", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.rowDescription(e);
-    });
-
-    conn.addEventListener("DataRow", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.dataRow(e);
-    });
-
-    conn.addEventListener("NoticeResponse", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.noticeResponse(e);
-    });
-
-    conn.addEventListener("ErrorResponse", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.errorResponse(e);
-
-	that._curQuery.shift();
-    });
-
-    conn.addEventListener("ParseComplete", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.parseComplete(e);
-
-	that._curQuery.shift();
-    });
-
-    conn.addEventListener("BindComplete", function (e) {
-	var query = _getQuery();
-
-	if (!query) {
-	    return;
-	}
-
-	query.bindComplete(e);
-
-	that._curQuery.shift();
-    });
+    // Events we pass through to the current running query.
+    _proxyEvent("CloseComplete", "closeComplete", true);
+    _proxyEvent("CommandComplete", "commandComplete", true);
+    _proxyEvent("PortalSuspended", "portalSuspended", true);
+    _proxyEvent("RowDescription", "rowDescription", false);
+    _proxyEvent("DataRow", "dataRow", false);
+    _proxyEvent("NoticeResponse", "noticeResponse", false);
+    _proxyEvent("ErrorResponse", "errorResponse", true);
+    _proxyEvent("ParseComplete", "parseComplete", true);
+    _proxyEvent("BindComplete", "bindComplete", true);
 };
 
 PGState.prototype.connect = function () {
