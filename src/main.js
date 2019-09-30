@@ -838,7 +838,7 @@ var _SimpleQuery = function (state) {
 
 _SimpleQuery.prototype.query = function (queryString) {
     return new Promise((resolve, reject) => {
-	this.state._newQuery(query);
+	this.state._newQuery(this);
 	this.promises.push([resolve, reject]);
 	this.state.conn.query(queryString);
 	this.state.conn.flush();
