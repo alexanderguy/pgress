@@ -1,7 +1,14 @@
 <html>
     <head>
-	<script src="node_modules/md5.js/index.js"></script>
-	<script src="dist/pg.js"></script>
+	<script src="dist/pgress.js"></script>
 	<script src="test.js"></script>
     </head>
+
+    <body>
+	URL:<input type="text" id="url" name="url" value="ws://localhost:8080/ws"><br>
+	Database:<input type="text" id="db" name="db"><br>
+	Username:<input type="text" id="username" name="username"><br>
+	Password:<input type="password" id="password" name="password"><br>
+	<input type="submit" value="Submit" onclick="execute();">
+    </body>
 </html>
