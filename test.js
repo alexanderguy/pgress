@@ -1,4 +1,4 @@
-var pg = new PGState("ws://localhost:8080/", "alexander", "alexander", "mypasswd");
+var pg = new pgress.PGState("ws://localhost:8080/", "alexander", "alexander", "mypasswd");
 
 pg.connect().then(() => {
     console.log("we're ready to query!");
