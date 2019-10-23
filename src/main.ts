@@ -78,8 +78,6 @@ function MsgWriter(id) {
 
     // Make space for the size.
     this.int32(0);
-
-    return this;
 }
 
 MsgWriter.prototype.int32 = function(v) {
@@ -131,7 +129,6 @@ MsgWriter.prototype.finish = function() {
 export var PGConn = function(): void {
     this.buf = new ArrayBuffer(0);
     this._events = {};
-    return this;
 };
 
 PGConn.prototype.addEventListener = function(eventType, f) {
