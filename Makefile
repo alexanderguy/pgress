@@ -12,7 +12,7 @@ node_modules:
 	npm install
 
 clean:
-	$(RM) dist/index.js
+	$(RM) dist/pgress.js
 
 distclean: clean
 	$(RM) -r node_modules
