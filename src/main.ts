@@ -451,8 +451,8 @@ PGConn.prototype.flush = function() {
 PGConn.prototype._B_N = function(reader) {
     var notices = [];
 
-    while (r.view.getUint8(r.pos) != 0) {
-        notices.push({ code: r.char8(), msg: r.string() });
+    while (reader.view.getUint8(reader.pos) != 0) {
+        notices.push({ code: reader.char8(), msg: reader.string() });
     }
 
     this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
