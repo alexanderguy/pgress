@@ -1,5 +1,5 @@
-var log = require("loglevel");
-var md5 = require('./md5.js');
+import log from "loglevel";
+import md5 from "md5.js";
 
 function MsgReader(view) {
     this.view = view;
