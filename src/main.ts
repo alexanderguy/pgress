@@ -128,8 +128,8 @@ MsgWriter.prototype.finish = function() {
     return res;
 };
 
-export var PGConn = function() {
-    this.buf = new ArrayBuffer();
+export var PGConn = function(): void {
+    this.buf = new ArrayBuffer(0);
     this._events = {};
     return this;
 };
