@@ -1,12 +1,12 @@
 import log from "loglevel";
 import md5 from "md5.js";
 
-function MsgReader(view) {
+function MsgReader(view: DataView): void {
     this.view = view;
     this.pos = 0;
 }
 
-MsgReader.prototype._consume = function(n) {
+MsgReader.prototype._consume = function(n: number) {
     this.pos += n;
 };
 
@@ -26,7 +26,7 @@ MsgReader.prototype.uint8 = function() {
     return val;
 }
 
-MsgReader.prototype.uint8array = function(n) {
+MsgReader.prototype.uint8array = function(n: number) {
     var buf = new Uint8Array(this.view.buffer, this.view.byteOffset + this.pos, n);
     this._consume(n);
     return buf;
@@ -65,7 +65,7 @@ MsgReader.prototype.string = function() {
     return s;
 }
 
-function MsgWriter(id) {
+function MsgWriter(id?: string): void {
     this.buf = new ArrayBuffer(4096);
     this.view = new DataView(this.buf);
     this.pos = 0;
@@ -80,36 +80,36 @@ function MsgWriter(id) {
     this.int32(0);
 }
 
-MsgWriter.prototype.int32 = function(v) {
+MsgWriter.prototype.int32 = function(v: number) {
     this.view.setInt32(this.pos, v);
     this.pos += 4;
 };
 
-MsgWriter.prototype.int16 = function(v) {
+MsgWriter.prototype.int16 = function(v: number) {
     this.view.setInt16(this.pos, v);
     this.pos += 2;
 };
 
-MsgWriter.prototype.uint8array = function(v) {
+MsgWriter.prototype.uint8array = function(v: Array<number>) {
     // XXX - We could do this better.
     for (var i = 0; i < v.length; i++) {
         this.uint8(v[i]);
     }
 };
 
-MsgWriter.prototype.string = function(v) {
+MsgWriter.prototype.string = function(v: string) {
     var enc = new TextEncoder();
     var sBuf = enc.encode(v);
     this.uint8array(sBuf)
     this.uint8(0);
 };
 
-MsgWriter.prototype.uint8 = function(v) {
+MsgWriter.prototype.uint8 = function(v: number) {
     this.view.setUint8(this.pos, v);
     this.pos += 1;
 };
 
-MsgWriter.prototype.char8 = function(v) {
+MsgWriter.prototype.char8 = function(v: string) {
     this.uint8(v.charCodeAt(0));
 };
 
@@ -131,7 +131,7 @@ export var PGConn = function(): void {
     this._events = {};
 };
 
-PGConn.prototype.addEventListener = function(eventType, f) {
+PGConn.prototype.addEventListener = function(eventType: string, f) {
     eventType = eventType.toLowerCase();
 
     var events = this._events[eventType];
@@ -145,7 +145,7 @@ PGConn.prototype.addEventListener = function(eventType, f) {
     this._events[eventType] = events;
 };
 
-PGConn.prototype.dispatchEvent = function(event) {
+PGConn.prototype.dispatchEvent = function(event: CustomEvent) {
     var eventType = event.type.toLowerCase();
 
     log.debug("event type is:", eventType, event);
@@ -164,7 +164,7 @@ PGConn.prototype.dispatchEvent = function(event) {
     return true;
 };
 
-PGConn.prototype.removeEventListener = function(eventType, listener) {
+PGConn.prototype.removeEventListener = function(eventType: string, listener) {
     var handlers = this._events[eventType.toLowerCase()];
 
     if (!handlers) {
@@ -302,7 +302,7 @@ PGConn.prototype._B_K = function(reader) {
 }
 
 // Bind (F)
-PGConn.prototype.bind = function(portalName, preparedName, paramFormats, params, resultFormats) {
+PGConn.prototype.bind = function(portalName: string, preparedName: string, paramFormats: Array<string>, params: Array<any>, resultFormats: Array<string>) {
     var i;
     var msg = new MsgWriter('B');
 
@@ -315,7 +315,7 @@ PGConn.prototype.bind = function(portalName, preparedName, paramFormats, params,
     msg.string(portalName);
     msg.string(preparedName);
 
-    var _encodeFormat = function(v) {
+    var _encodeFormat = function(v: string) {
         if (v == "binary") {
             return 1;
         }
@@ -355,7 +355,7 @@ PGConn.prototype._B_2 = function(reader) {
 }
 
 // Close (F)
-PGConn.prototype.close = function(closeType, name) {
+PGConn.prototype.close = function(closeType: string, name: string) {
     var msg = new MsgWriter("C");
     msg.char8(closeType);
     msg.string(name);
@@ -398,7 +398,7 @@ PGConn.prototype._B_D = function(reader) {
 }
 
 // Describe (F)
-PGConn.prototype.describe = function(descType, name) {
+PGConn.prototype.describe = function(descType: string, name: string) {
     var msg = new MsgWriter("D");
     msg.char8(descType);
     msg.string(name);
@@ -424,7 +424,7 @@ PGConn.prototype._B_E = function(r) {
 }
 
 // Execute (F)
-PGConn.prototype.execute = function(portal, nRows) {
+PGConn.prototype.execute = function(portal: string, nRows: number) {
     if (!nRows) {
         nRows = 0;
     }
@@ -466,7 +466,7 @@ PGConn.prototype._B_S = function(reader) {
 }
 
 // Parse (F)
-PGConn.prototype.parse = function(name, sqlQuery, paramTypes) {
+PGConn.prototype.parse = function(name: string, sqlQuery: string, paramTypes: Array<number>) {
     if (!name) {
         name = "";
     }
@@ -494,7 +494,7 @@ PGConn.prototype._B_1 = function(reader) {
 }
 
 // PasswordMessage (F)
-PGConn.prototype.passwordMessage = function(user, salt, password) {
+PGConn.prototype.passwordMessage = function(user: string, salt: string, password: string) {
     var passHash = md5.hex(password + user);
     var hashRes = md5.create();
 
@@ -515,7 +515,7 @@ PGConn.prototype._B_s = function() {
 }
 
 // Query (F)
-PGConn.prototype.query = function(sqlString) {
+PGConn.prototype.query = function(sqlString: string) {
     var msg = new MsgWriter("Q");
     msg.string(sqlString);
 
@@ -602,7 +602,7 @@ PGConn.prototype.terminate = function() {
 }
 
 // State Handler For Postgres Connections
-export var PGState = function(url, database, user, password) {
+export var PGState = function(url: string, database: string, user: string, password: string) {
     this.url = url;
     this.database = database;
     this.user = user;
@@ -617,7 +617,7 @@ export var PGState = function(url, database, user, password) {
 
     var nameCount = 0;
 
-    this._checkName = function(nameType, name) {
+    this._checkName = function(nameType: string, name: string) {
         if (name || name === "") {
             return name;
         }
@@ -637,12 +637,12 @@ export var PGState = function(url, database, user, password) {
         return that._curQuery[0];
     };
 
-    conn.addEventListener("AuthenticationMD5Password", function(e) {
+    conn.addEventListener("AuthenticationMD5Password", function(e: CustomEvent) {
         conn.passwordMessage(that.user, e.detail.salt, that.password);
     });
 
-    var _proxyEvent = (eventName, methodName, final) => {
-        conn.addEventListener(eventName, (e) => {
+    var _proxyEvent = (eventName: string, methodName: string, final: boolean) => {
+        conn.addEventListener(eventName, (e: CustomEvent) => {
             if (that._curQuery.length < 1) {
                 log.error("no query to receive event: ", eventName);
             }
@@ -682,7 +682,8 @@ PGState.prototype.connect = function() {
     var that = this;
 
     var startupParams = {
-        user: that.user
+        user: that.user,
+        database: ""
     };
 
     if (that.database) {
@@ -715,24 +716,24 @@ PGState.prototype.connect = function() {
     };
 
     return new Promise((resolve, reject) => {
-        that.conn.addEventListener("ReadyForQuery", (e) => {
+        that.conn.addEventListener("ReadyForQuery", (e: CustomEvent) => {
             that.state = "READY";
             resolve();
         });
     });
 };
 
-PGState.prototype._newQuery = function(query) {
+PGState.prototype._newQuery = function(query: string) {
     this._curQuery.push(query);
 };
 
-PGState.prototype.simpleQuery = function(query) {
+PGState.prototype.simpleQuery = function(query: string) {
     var h = new _SimpleQuery(this);
 
     return h.query(query);
 };
 
-PGState.prototype.preparedStatement = function(name) {
+PGState.prototype.preparedStatement = function(name: string) {
     var h = new _PreparedStatement(this, name);
     return h;
 };
@@ -833,7 +834,7 @@ var _SimpleQuery = function(state) {
     this._dataRows = [];
 };
 
-_SimpleQuery.prototype.query = function(queryString) {
+_SimpleQuery.prototype.query = function(queryString: string) {
     return new Promise((resolve, reject) => {
         this.state._newQuery(this);
         this.promises.push([resolve, reject]);
@@ -854,32 +855,32 @@ _SimpleQuery.prototype._relayRows = function() {
     this._dataRows = [];
 };
 
-_SimpleQuery.prototype.commandComplete = function(e) {
+_SimpleQuery.prototype.commandComplete = function(e: CustomEvent) {
     this._relayRows();
 };
 
-_SimpleQuery.prototype.rowDescription = function(e) {
+_SimpleQuery.prototype.rowDescription = function(e: CustomEvent) {
     this._rowDesc = e.detail.fields;
 };
 
-_SimpleQuery.prototype.dataRow = function(e) {
+_SimpleQuery.prototype.dataRow = function(e: CustomEvent) {
     this._dataRows.push(e.detail);
 };
 
-_SimpleQuery.prototype.emptyQueryResponse = function(e) {
+_SimpleQuery.prototype.emptyQueryResponse = function(e: CustomEvent) {
     this._relayRows();
 };
 
-_SimpleQuery.prototype.errorResponse = function(e) {
+_SimpleQuery.prototype.errorResponse = function(e: CustomEvent) {
     this._dataRows = [];
     this.promises.shift()[1](e.detail);
 };
 
-_SimpleQuery.prototype.noticeResponse = function(e) {
+_SimpleQuery.prototype.noticeResponse = function(e: CustomEvent) {
     // What to do here?
 };
 
-var _Portal = function(state, portalName, statementName) {
+var _Portal = function(state, portalName: string, statementName: string) {
     this.promises = [];
 
     this.state = state;
@@ -900,11 +901,11 @@ _Portal.prototype.bind = function(paramFormats, params, resultFormats) {
     });
 };
 
-_Portal.prototype.bindComplete = function(e) {
+_Portal.prototype.bindComplete = function(e: CustomEvent) {
     this.promises.shift()[0]();
 }
 
-_Portal.prototype.execute = function(nRows) {
+_Portal.prototype.execute = function(nRows: number | undefined) {
     nRows = nRows || 0;
 
     return new Promise((resolve, reject) => {
@@ -931,32 +932,32 @@ _Portal.prototype._relayRows = function() {
     this._dataRows = [];
 };
 
-_Portal.prototype.commandComplete = function(e) {
+_Portal.prototype.commandComplete = function(e: CustomEvent) {
     this._relayRows();
 };
 
-_Portal.prototype.portalSuspended = function(e) {
+_Portal.prototype.portalSuspended = function(e: CustomEvent) {
     this._relayRows();
 };
 
-_Portal.prototype.emptyQueryResponse = function(e) {
+_Portal.prototype.emptyQueryResponse = function(e: CustomEvent) {
     this._relayRows();
 };
 
-_Portal.prototype.rowDescription = function(e) {
+_Portal.prototype.rowDescription = function(e: CustomEvent) {
     this._rowDesc = e.detail.fields;
 };
 
-_Portal.prototype.dataRow = function(e) {
+_Portal.prototype.dataRow = function(e: CustomEvent) {
     this._dataRows.push(e.detail);
 };
 
-_Portal.prototype.errorResponse = function(e) {
+_Portal.prototype.errorResponse = function(e: CustomEvent) {
     this._dataRows = [];
     this.promises.shift()[1](e.detail);
 };
 
-_Portal.prototype.noticeResponse = function(e) {
+_Portal.prototype.noticeResponse = function(e: CustomEvent) {
     // What to do here?
 };
 
