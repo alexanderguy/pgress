@@ -138,26 +138,22 @@ PGState.prototype.preparedStatement = function(name: string) {
     return h;
 };
 
-PGState.prototype.extendedQuery = function() {
-    var args = Array.prototype.slice.call(arguments);
+PGState.prototype.extendedQuery = async function(...args: any[]) {
     var query = args.shift();
 
     var s = this.preparedStatement();
     var p, results;
 
-    return s.parse(query).then(() => {
-        p = s.portal();
-        p.bind([], args, []);
-    }).then(() => {
-        return p.execute()
-    }).then((res) => {
-        results = res;
-        return p.close();
-    }).then(() => {
-        return s.close()
-    }).then(() => {
-        return results;
-    });
+    await s.parse(query);
+    p = s.portal();
+    await p.bind([], args, []);
+
+    let res = await p.execute();
+
+    await p.close();
+    await s.close();
+
+    return res;
 };
 
 
