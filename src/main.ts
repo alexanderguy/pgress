@@ -1,5 +1,11 @@
 import log from "loglevel";
-import md5 from "md5.js";
+
+// XXX - FIXTHIS - This MD5 module is being barfed on by tsc, so just
+// hide it as any behind a webpack require.
+declare function require(module: string): any;
+let md5 = require("./md5");
+// XXX - FIXTHIS
+
 
 function MsgReader(view: DataView): void {
     this.view = view;
