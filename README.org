@@ -2,8 +2,10 @@
 
 'Native' PostgreSQL client in JavaScript for direct connection via
 WebSocket.  This API hasn't been locked down.  The code probably has
-major bugs.  Exposing your PostgrSQL database to the Internet can be
+major bugs.  Exposing your PostgreSQL database to the Internet can be
 a really bad idea.
+
+-> Only use this if you know what you're doing. <-
 
 #+BEGIN_SRC javascript
 var conn = new pg.PGState("ws://myserver/postgres-ws", "mydb", "myuser", "SomePassword");
