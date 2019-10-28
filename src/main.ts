@@ -501,9 +501,9 @@ PGConn.prototype.passwordMessage = function(user: string, salt: string, password
     hashRes.update(passHash);
     hashRes.update(salt);
 
-    var hashRes = "md5" + hashRes.hex();
+    var hashHex = "md5" + hashRes.hex();
     var msg = new MsgWriter("p");
-    msg.string(hashRes)
+    msg.string(hashHex)
 
     var packet = msg.finish();
     this.conn.send(packet)
