@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import { strict as assert } from 'assert';
 import { MsgReader, MsgWriter } from "../src/msg";
 
 describe('MsgWriter', function() {
