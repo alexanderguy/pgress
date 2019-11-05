@@ -62,7 +62,7 @@ EventDispatcher.prototype.removeEventListener = function(eventType: string, list
         }
     }
 
-    this._events = newHandlers;
+    this._events[eventType.toLowerCase()] = newHandlers;
 };
 
 export const PGConn = function(): void {
