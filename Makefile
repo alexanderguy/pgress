@@ -1,4 +1,7 @@
-WEBPACK = ./node_modules/.bin/webpack-cli
+BIN = ./node_modules/.bin
+WEBPACK = $(BIN)/webpack-cli
+MOCHA = $(BIN)/mocha
+
 
 all: webpack
 
@@ -11,8 +14,13 @@ watch: node_modules
 node_modules:
 	npm install
 
+test: .PHONY
+	TS_NODE_COMPILER_OPTIONS='{"module":"commonjs"}' $(MOCHA) --require ts-node/register 'test/**/*.spec.{ts,tsx}'
+
 clean:
 	$(RM) dist/pgress.js
 
 distclean: clean
 	$(RM) -r node_modules
+
+.PHONY:
