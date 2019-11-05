@@ -127,14 +127,10 @@ describe('MsgReader', function() {
         });
 
         it('checkUint8Array', function() {
-            var should = [0xBA, 0x5E, 0xBA, 0x11];
+            var should = new Uint8Array([0xBA, 0x5E, 0xBA, 0x11]);
             var is = r.uint8array(4);
 
-            assert.equal(should.length, is.length);
-
-            for (let i = 0; i < is.length; i++) {
-                assert.equal(should[i], is[i]);
-            }
+            assert.deepEqual(should, is);
         });
 
         it('checkString', function() {
