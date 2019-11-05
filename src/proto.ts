@@ -387,7 +387,7 @@ PGConn.prototype.passwordMessage = function(user: string, salt: string, password
     msg.string(hashHex)
 
     const packet = msg.finish();
-    this.conn.send(packet)
+    this.conn.send(packet);
 }
 
 // PortalSuspended (B)
