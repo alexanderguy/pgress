@@ -40,5 +40,19 @@ describe('EventDispatcher', function() {
             d.dispatchEvent(new CustomEvent('anotherEvent'));
             assert.equal(eventCount['anotherEvent'], 1);
         });
+
+        it('removeListener1', function() {
+            d.removeEventListener("anotherEvent", incEvent);
+        });
+
+        it('checkOther1', function() {
+            d.dispatchEvent(new CustomEvent('anotherEvent'));
+            assert.equal(eventCount['anotherEvent'], 1);
+        });
+
+        it('removeNonexistent', function() {
+            d.removeEventListener("nonexistent", incEvent);
+        });
+
     });
 });
