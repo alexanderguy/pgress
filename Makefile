@@ -15,7 +15,7 @@ node_modules:
 	npm install
 
 test: .PHONY
-	TS_NODE_COMPILER_OPTIONS='{"module":"commonjs"}' $(MOCHA) --require ts-node/register 'test/**/*.spec.{ts,tsx}'
+	TS_NODE_COMPILER_OPTIONS='{"module":"commonjs"}' $(MOCHA) --require ./test/node-compat.js --require ts-node/register 'test/**/*.spec.{ts,tsx}'
 
 clean:
 	$(RM) dist/pgress.js
