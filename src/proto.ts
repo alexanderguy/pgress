@@ -7,12 +7,11 @@ declare function require(module: string): any;
 const md5 = require("./md5");
 // XXX - FIXTHIS
 
-export const PGConn = function(): void {
-    this.buf = new ArrayBuffer(0);
+export const EventDispatcher = function(): void {
     this._events = {};
 };
 
-PGConn.prototype.addEventListener = function(eventType: string, f) {
+EventDispatcher.prototype.addEventListener = function(eventType: string, f) {
     eventType = eventType.toLowerCase();
 
     let events = this._events[eventType];
@@ -26,7 +25,7 @@ PGConn.prototype.addEventListener = function(eventType: string, f) {
     this._events[eventType] = events;
 };
 
-PGConn.prototype.dispatchEvent = function(event: CustomEvent) {
+EventDispatcher.prototype.dispatchEvent = function(event: CustomEvent) {
     const eventType = event.type.toLowerCase();
 
     log.debug("event type is:", eventType, event);
@@ -45,7 +44,7 @@ PGConn.prototype.dispatchEvent = function(event: CustomEvent) {
     return true;
 };
 
-PGConn.prototype.removeEventListener = function(eventType: string, listener) {
+EventDispatcher.prototype.removeEventListener = function(eventType: string, listener) {
     const handlers = this._events[eventType.toLowerCase()];
 
     if (!handlers) {
@@ -65,6 +64,12 @@ PGConn.prototype.removeEventListener = function(eventType: string, listener) {
 
     this._events = newHandlers;
 };
+
+export const PGConn = function(): void {
+    this.buf = new ArrayBuffer(0);
+};
+
+PGConn.prototype = new EventDispatcher();
 
 PGConn.prototype.attachSocket = function(sock) {
     this.conn = sock;
