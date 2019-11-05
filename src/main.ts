@@ -2,7 +2,7 @@ import log from "loglevel";
 import { PGConn } from "./proto";
 
 // State Handler For Postgres Connections
-export var PGState = function(url: string, database: string, user: string, password: string) {
+export const PGState = function(url: string, database: string, user: string, password: string) {
     this.url = url;
     this.database = database;
     this.user = user;
@@ -12,10 +12,10 @@ export var PGState = function(url: string, database: string, user: string, passw
 
     this.conn = new PGConn();
 
-    var conn = this.conn;
-    var that = this;
+    const conn = this.conn;
+    const that = this;
 
-    var nameCount = 0;
+    let nameCount = 0;
 
     this._checkName = function(nameType: string, name: string) {
         if (name || name === "") {
@@ -28,7 +28,7 @@ export var PGState = function(url: string, database: string, user: string, passw
         return name;
     };
 
-    var _getQuery = function() {
+    const _getQuery = function() {
         if (that._curQuery.length < 1) {
             log.warn("got a command complete, but there's no running query to proxy to?");
             return undefined;
@@ -41,14 +41,14 @@ export var PGState = function(url: string, database: string, user: string, passw
         conn.passwordMessage(that.user, e.detail.salt, that.password);
     });
 
-    var _proxyEvent = (eventName: string, methodName: string, final: boolean) => {
+    const _proxyEvent = (eventName: string, methodName: string, final: boolean) => {
         conn.addEventListener(eventName, (e: CustomEvent) => {
             if (that._curQuery.length < 1) {
                 log.error("no query to receive event: ", eventName);
             }
 
-            var query = that._curQuery[0];
-            var m = query[methodName];
+            const query = that._curQuery[0];
+            const m = query[methodName];
 
             if (m) {
                 m.call(query, e);
@@ -75,13 +75,13 @@ export var PGState = function(url: string, database: string, user: string, passw
 };
 
 PGState.prototype.connect = function() {
-    var ws = new WebSocket(this.url, "binary");
+    const ws = new WebSocket(this.url, "binary");
     ws.binaryType = "arraybuffer";
     this.conn.attachSocket(ws);
 
-    var that = this;
+    const that = this;
 
-    var startupParams = {
+    const startupParams = {
         user: that.user,
         database: ""
     };
@@ -99,7 +99,7 @@ PGState.prototype.connect = function() {
         that.conn.socketError();
 
         // Zap any open queries.
-        for (var i = 0; i < that._curQuery; i++) {
+        for (let i = 0; i < that._curQuery; i++) {
             that._curQuery[i].errorResponse();
         }
 
@@ -128,27 +128,27 @@ PGState.prototype._newQuery = function(query: string) {
 };
 
 PGState.prototype.simpleQuery = function(query: string) {
-    var h = new _SimpleQuery(this);
+    const h = new _SimpleQuery(this);
 
     return h.query(query);
 };
 
 PGState.prototype.preparedStatement = function(name: string) {
-    var h = new _PreparedStatement(this, name);
+    const h = new _PreparedStatement(this, name);
     return h;
 };
 
 PGState.prototype.extendedQuery = async function(...args: any[]) {
-    var query = args.shift();
+    const query = args.shift();
 
-    var s = this.preparedStatement();
-    var p, results;
+    const s = this.preparedStatement();
+    let p, results;
 
     await s.parse(query);
     p = s.portal();
     await p.bind([], args, []);
 
-    let res = await p.execute();
+    const res = await p.execute();
 
     await p.close();
     await s.close();
@@ -161,12 +161,12 @@ PGState.prototype.terminate = function() {
     this.conn.terminate();
 };
 
-var _decodeRow = function(desc, data) {
-    var res = [];
-    var d = new TextDecoder("utf-8");
+const _decodeRow = function(desc, data) {
+    const res = [];
+    const d = new TextDecoder("utf-8");
 
     // XXX - This should be generated automatically.
-    var oidConversion = {
+    const oidConversion = {
         20: (v) => parseInt(v),
         21: (v) => parseInt(v),
         22: (v) => parseInt(v),
@@ -176,12 +176,12 @@ var _decodeRow = function(desc, data) {
         3802: (v) => JSON.parse(v)
     };
 
-    for (var i = 0; i < data.length; i++) {
-        var s = data[i]
+    for (let i = 0; i < data.length; i++) {
+        let s = data[i]
 
         // If there's data, let's process it.
         if (s != null) {
-            var colInfo;
+            let colInfo;
 
             if (i < desc.length) {
                 colInfo = desc[i];
@@ -199,7 +199,7 @@ var _decodeRow = function(desc, data) {
 
                 // Convert the data to something we like to use.
                 if (colInfo.oid != undefined) {
-                    var m = oidConversion[colInfo.oid];
+                    const m = oidConversion[colInfo.oid];
 
                     if (m != undefined) {
                         s = m(s)
@@ -222,7 +222,7 @@ var _decodeRow = function(desc, data) {
     return res;
 };
 
-var _SimpleQuery = function(state) {
+const _SimpleQuery = function(state) {
     this.state = state;
 
     this.promises = [];
@@ -240,9 +240,9 @@ _SimpleQuery.prototype.query = function(queryString: string) {
 };
 
 _SimpleQuery.prototype._relayRows = function() {
-    var rows = [];
+    const rows = [];
 
-    for (var i = 0; i < this._dataRows.length; i++) {
+    for (let i = 0; i < this._dataRows.length; i++) {
         rows.push(_decodeRow(this._rowDesc, this._dataRows[i]));
     }
     // XXX - This only makes sense for a simple query.
@@ -276,7 +276,7 @@ _SimpleQuery.prototype.noticeResponse = function(e: CustomEvent) {
     // What to do here?
 };
 
-var _Portal = function(state, portalName: string, statementName: string) {
+const _Portal = function(state, portalName: string, statementName: string) {
     this.promises = [];
 
     this.state = state;
@@ -317,9 +317,9 @@ _Portal.prototype.execute = function(nRows: number | undefined) {
 };
 
 _Portal.prototype._relayRows = function() {
-    var rows = [];
+    const rows = [];
 
-    for (var i = 0; i < this._dataRows.length; i++) {
+    for (let i = 0; i < this._dataRows.length; i++) {
         rows.push(_decodeRow(this._rowDesc, this._dataRows[i]));
     }
     // XXX - This only makes sense for a simple query.
@@ -370,7 +370,7 @@ _Portal.prototype.closeComplete = function(e) {
     this.promises.shift()[0]();
 };
 
-var _PreparedStatement = function(state, name) {
+const _PreparedStatement = function(state, name) {
     this.promises = [];
 
     this.state = state;
@@ -391,7 +391,7 @@ _PreparedStatement.prototype.parseComplete = function(e) {
 };
 
 _PreparedStatement.prototype.portal = function(name) {
-    var portal = new _Portal(this.state, name, this.name);
+    const portal = new _Portal(this.state, name, this.name);
     return portal;
 };
 
