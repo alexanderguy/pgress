@@ -85,6 +85,47 @@ const s2u8 = function(s: string) {
     return new Uint8Array(r);
 };
 
+class AssertReader {
+    r: any
+
+    constructor(reader) {
+        this.r = reader
+    }
+
+    int32(v) {
+        assert.equal(this.r.int32(), v);
+    }
+
+    string(v) {
+        assert.equal(this.r.string(), v);
+    }
+
+    uint8(v) {
+        assert.equal(this.r.uint8(), v);
+    }
+
+    int16(v) {
+        assert.equal(this.r.int16(), v);
+    }
+
+    char8(v) {
+        assert.equal(this.r.char8(), v);
+    }
+
+    uint8array(v) {
+        if (typeof v === "string") {
+            const a = s2u8(v)
+            assert.deepEqual(this.r.uint8array(a.byteLength), a);
+        } else {
+            assert.deepEqual(this.r.uint8array(v.byteLength), v);
+        }
+    }
+
+    done() {
+        assert.equal(this.r.left(), 0);
+    }
+}
+
 describe('PGConn', function() {
     describe('basicMessages', function() {
         const pg = new PGConn();
