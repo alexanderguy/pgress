@@ -140,45 +140,48 @@ describe('PGConn', function() {
             });
             assert.equal(sock.packetCount(), 1);
             const r = sock.popReader();
+            const ar = new AssertReader(r);
 
-            assert.equal(r.int32(), 33);
-            assert.equal(r.int32(), 196608);
-            assert.equal(r.string(), "key1");
-            assert.equal(r.string(), "param1");
-            assert.equal(r.string(), "key2");
-            assert.equal(r.string(), "param2");
-            assert.equal(r.uint8(), 0);
-            assert.equal(r.left(), 0);
+            ar.int32(33);
+            ar.int32(196608);
+            ar.string("key1");
+            ar.string("param1");
+            ar.string("key2");
+            ar.string("param2");
+            ar.uint8(0);
+
+            ar.done();
         });
 
         it("bind", function() {
             pg.bind("portalName", "preparedName", ["binary", "somethingElse"], ["param0", "param1"], ["somethingElse", "binary"]);
             assert.equal(sock.packetCount(), 1);
-            const r = sock.popReader();
+            const r = sock.popReader()
+            const ar = new AssertReader(r);
 
-            assert.equal(r.char8(), "B");
-            assert.equal(r.int32(), 62);
-            assert.equal(r.string(), "portalName");
-            assert.equal(r.string(), "preparedName");
+            ar.char8("B");
+            ar.int32(62);
+            ar.string("portalName");
+            ar.string("preparedName");
 
             // Check Parameter Formats
-            assert.equal(r.int16(), 2);
-            assert.equal(r.int16(), 1);
-            assert.equal(r.int16(), 0);
+            ar.int16(2);
+            ar.int16(1);
+            ar.int16(0);
 
             // Check Parameters
-            assert.equal(r.int16(), 2);
-            assert.equal(r.int32(), 6);
-            assert.deepEqual(r.uint8array(6), s2u8("param0"));
-            assert.equal(r.int32(), 6);
-            assert.deepEqual(r.uint8array(6), s2u8("param1"));
+            ar.int16(2);
+            ar.int32(6);
+            ar.uint8array("param0");
+            ar.int32(6);
+            ar.uint8array("param1");
 
             // Check Result Formats
-            assert.equal(r.int16(), 2);
-            assert.equal(r.int16(), 0);
-            assert.equal(r.int16(), 1);
+            ar.int16(2);
+            ar.int16(0);
+            ar.int16(1);
 
-            assert.equal(r.left(), 0);
+            ar.done();
         });
 
         it("bindComplete", function() {
