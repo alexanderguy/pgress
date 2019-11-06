@@ -1,5 +1,6 @@
 import { strict as assert } from 'assert';
-import { EventDispatcher } from "../src/proto";
+import { EventDispatcher, PGConn } from "../src/proto";
+import { MsgReader, MsgWriter } from "../src/msg";
 
 describe('EventDispatcher', function() {
     describe('SimpleSingle', function() {
@@ -54,5 +55,105 @@ describe('EventDispatcher', function() {
             d.removeEventListener("nonexistent", incEvent);
         });
 
+    });
+});
+
+
+const SocketMock = function() {
+    this._readers = [];
+};
+
+SocketMock.prototype.send = function(packet: any): void {
+    this._readers.push(new MsgReader(new DataView(packet)));
+};
+
+SocketMock.prototype.packetCount = function() {
+    return this._readers.length;
+};
+
+SocketMock.prototype.popReader = function() {
+    return this._readers.shift();
+};
+
+const s2u8 = function(s: string) {
+    let r = [];
+
+    for (let i = 0; i < s.length; i++) {
+        r.push(s.charCodeAt(i));
+    }
+
+    return new Uint8Array(r);
+};
+
+describe('PGConn', function() {
+    describe('basicMessages', function() {
+        const pg = new PGConn();
+        const sock = new SocketMock();
+
+        pg.attachSocket(sock);
+
+        it("startup", function() {
+            pg.startupMessage({
+                key1: "param1",
+                key2: "param2",
+            });
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+
+            assert.equal(r.int32(), 33);
+            assert.equal(r.int32(), 196608);
+            assert.equal(r.string(), "key1");
+            assert.equal(r.string(), "param1");
+            assert.equal(r.string(), "key2");
+            assert.equal(r.string(), "param2");
+            assert.equal(r.uint8(), 0);
+            assert.equal(r.left(), 0);
+        });
+
+        it("bind", function() {
+            pg.bind("portalName", "preparedName", ["binary", "somethingElse"], ["param0", "param1"], ["somethingElse", "binary"]);
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+
+            assert.equal(r.char8(), "B");
+            assert.equal(r.int32(), 62);
+            assert.equal(r.string(), "portalName");
+            assert.equal(r.string(), "preparedName");
+
+            // Check Parameter Formats
+            assert.equal(r.int16(), 2);
+            assert.equal(r.int16(), 1);
+            assert.equal(r.int16(), 0);
+
+            // Check Parameters
+            assert.equal(r.int16(), 2);
+            assert.equal(r.int32(), 6);
+            assert.deepEqual(r.uint8array(6), s2u8("param0"));
+            assert.equal(r.int32(), 6);
+            assert.deepEqual(r.uint8array(6), s2u8("param1"));
+
+            // Check Result Formats
+            assert.equal(r.int16(), 2);
+            assert.equal(r.int16(), 0);
+            assert.equal(r.int16(), 1);
+
+            assert.equal(r.left(), 0);
+        });
+
+        it("bindComplete", function() {
+            let events = 0;
+            const cb = (e) => {
+                events += 1;
+            };
+
+            pg.addEventListener("BindComplete", cb);
+
+            const w = new MsgWriter("2");
+            pg.recv(w.finish());
+
+            pg.removeEventListener("BindComplete", cb);
+
+            assert.equal(events, 1);
+        });
     });
 });
