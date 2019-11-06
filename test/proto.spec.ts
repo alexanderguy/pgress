@@ -155,5 +155,23 @@ describe('PGConn', function() {
 
             assert.equal(events, 1);
         });
+
+        it("backendKeyData", function() {
+            let events = 0;
+            const cb = (e) => {
+                events += 1;
+                assert.equal(e.detail["processId"], 42);
+                assert.equal(e.detail["secretKey"], -1);
+            };
+
+            pg.addEventListener("BackendKeyData", cb);
+            const w = new MsgWriter("K");
+            w.int32(42);
+            w.int32(-1);
+            pg.recv(w.finish());
+            pg.removeEventListener("BackendKeyData");
+
+            assert.equal(events, 1);
+        });
     });
 });
