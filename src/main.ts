@@ -193,7 +193,7 @@ const _decodeRow = function(desc, data) {
             }
 
             // We Have A Text Field
-            if (colInfo.format == "text") {
+            if (colInfo.format === "text") {
                 // Turn this into UTF-8
                 s = d.decode(s);
 

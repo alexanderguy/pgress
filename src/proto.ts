@@ -202,7 +202,7 @@ PGConn.prototype.bind = function(portalName: string, preparedName: string, param
     msg.string(preparedName);
 
     const _encodeFormat = function(v: string) {
-        if (v == "binary") {
+        if (v === "binary") {
             return 1;
         }
 
@@ -270,7 +270,7 @@ PGConn.prototype._B_D = function(reader) {
 
     for (let i = 0; i < nCols; i++) {
         const nBytes = reader.int32();
-        if (nBytes == -1) {
+        if (nBytes === -1) {
             cols.push(null);
         } else {
             cols.push(reader.uint8array(nBytes));
@@ -436,7 +436,7 @@ PGConn.prototype._B_T = function(reader) {
         f['size'] = reader.int16();
         f['modifier'] = reader.int32();
 
-        if (reader.int16() == 1) {
+        if (reader.int16() === 1) {
             f['format'] = "binary";
         } else {
             // XXX - This is probably a bad assumption.
