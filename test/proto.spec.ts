@@ -88,8 +88,15 @@ const s2u8 = function(s: string) {
 class AssertReader {
     r: any
 
-    constructor(reader: MsgReader) {
+    constructor(reader: MsgReader, id?: string) {
         this.r = reader
+
+        if (id !== undefined) {
+            assert.equal(this.r.char8(), id);
+        }
+
+        // XXX - We should use this size.
+        this.r.int32();
     }
 
     int32(v: number): void {
