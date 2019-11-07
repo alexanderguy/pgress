@@ -235,7 +235,7 @@ PGConn.prototype.bind = function(portalName: string, preparedName: string, param
 }
 
 // BindComplete (B)
-PGConn.prototype._B_2 = function(reader: MsgReader) {
+PGConn.prototype._B_2 = function(_reader: MsgReader) {
     this.dispatchEvent(new CustomEvent("BindComplete"));
 }
 
@@ -250,7 +250,7 @@ PGConn.prototype.close = function(closeType: string, name: string) {
 };
 
 // CloseComplete (B)
-PGConn.prototype._B_3 = function(reader: MsgReader) {
+PGConn.prototype._B_3 = function(_reader: MsgReader) {
     const event = new CustomEvent("CloseComplete")
     this.dispatchEvent(event)
 };
@@ -293,7 +293,7 @@ PGConn.prototype.describe = function(descType: string, name: string) {
 };
 
 // EmptyQueryResponse (B)
-PGConn.prototype._B_I = function(r: MsgReader) {
+PGConn.prototype._B_I = function(_r: MsgReader) {
     this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
 };
 
@@ -374,7 +374,7 @@ PGConn.prototype.parse = function(name: string, sqlQuery: string, paramTypes: Ar
 };
 
 // ParseComplete (B)
-PGConn.prototype._B_1 = function(reader: MsgReader) {
+PGConn.prototype._B_1 = function(_reader: MsgReader) {
     this.dispatchEvent(new CustomEvent("ParseComplete"));
 }
 
