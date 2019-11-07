@@ -7,7 +7,7 @@ describe('EventDispatcher', function() {
         const d = new EventDispatcher();
         const eventCount = {};
 
-        let incEvent = function(e) {
+        let incEvent = function(e: CustomEvent) {
             let count = eventCount[e.type] || 0;
             count += 1;
             eventCount[e.type] = count;
@@ -88,31 +88,31 @@ const s2u8 = function(s: string) {
 class AssertReader {
     r: any
 
-    constructor(reader) {
+    constructor(reader: MsgReader) {
         this.r = reader
     }
 
-    int32(v) {
+    int32(v: number): void {
         assert.equal(this.r.int32(), v);
     }
 
-    string(v) {
+    string(v: string): void {
         assert.equal(this.r.string(), v);
     }
 
-    uint8(v) {
+    uint8(v: number): void {
         assert.equal(this.r.uint8(), v);
     }
 
-    int16(v) {
+    int16(v: number): void {
         assert.equal(this.r.int16(), v);
     }
 
-    char8(v) {
+    char8(v: string): void {
         assert.equal(this.r.char8(), v);
     }
 
-    uint8array(v) {
+    uint8array(v: Uint8Array | string): void {
         if (typeof v === "string") {
             const a = s2u8(v)
             assert.deepEqual(this.r.uint8array(a.byteLength), a);
@@ -121,7 +121,7 @@ class AssertReader {
         }
     }
 
-    done() {
+    done(): void {
         assert.equal(this.r.left(), 0);
     }
 }
@@ -186,7 +186,7 @@ describe('PGConn', function() {
 
         it("bindComplete", function() {
             let events = 0;
-            const cb = (e) => {
+            const cb = () => {
                 events += 1;
             };
 
@@ -202,7 +202,7 @@ describe('PGConn', function() {
 
         it("backendKeyData", function() {
             let events = 0;
-            const cb = (e) => {
+            const cb = (e: CustomEvent) => {
                 events += 1;
                 assert.equal(e.detail["processId"], 42);
                 assert.equal(e.detail["secretKey"], -1);
