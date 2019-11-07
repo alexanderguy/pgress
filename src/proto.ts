@@ -145,7 +145,7 @@ PGConn.prototype._dispatchMsg = function(buf: ArrayBuffer) {
 };
 
 // AuthenticationOk (B) / AuthenticationMD5Password (B)
-PGConn.prototype._B_R = function(r) {
+PGConn.prototype._B_R = function(r: MsgReader) {
     const authType = r.int32();
     let event: Event;
 
@@ -178,7 +178,7 @@ PGConn.prototype._B_R = function(r) {
 }
 
 // BackendKeyData (B)
-PGConn.prototype._B_K = function(reader) {
+PGConn.prototype._B_K = function(reader: MsgReader) {
     const keyData = {
         processId: reader.int32(),
         secretKey: reader.int32()
@@ -235,7 +235,7 @@ PGConn.prototype.bind = function(portalName: string, preparedName: string, param
 }
 
 // BindComplete (B)
-PGConn.prototype._B_2 = function(reader) {
+PGConn.prototype._B_2 = function(reader: MsgReader) {
     this.dispatchEvent(new CustomEvent("BindComplete"));
 }
 
@@ -250,20 +250,20 @@ PGConn.prototype.close = function(closeType: string, name: string) {
 };
 
 // CloseComplete (B)
-PGConn.prototype._B_3 = function(reader) {
+PGConn.prototype._B_3 = function(reader: MsgReader) {
     const event = new CustomEvent("CloseComplete")
     this.dispatchEvent(event)
 };
 
 // CommandComplete (B)
-PGConn.prototype._B_C = function(reader) {
+PGConn.prototype._B_C = function(reader: MsgReader) {
     const tag = reader.string()
     const event = new CustomEvent("CommandComplete")
     this.dispatchEvent(event)
 };
 
 // DataRow (B)
-PGConn.prototype._B_D = function(reader) {
+PGConn.prototype._B_D = function(reader: MsgReader) {
     const nCols = reader.int16();
     const cols = [];
 
@@ -293,12 +293,12 @@ PGConn.prototype.describe = function(descType: string, name: string) {
 };
 
 // EmptyQueryResponse (B)
-PGConn.prototype._B_I = function(r) {
+PGConn.prototype._B_I = function(r: MsgReader) {
     this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
 };
 
 // ErrorResponse (B)
-PGConn.prototype._B_E = function(r) {
+PGConn.prototype._B_E = function(r: MsgReader) {
     const errors = [];
 
     while (r.view.getUint8(r.pos) != 0) {
@@ -330,7 +330,7 @@ PGConn.prototype.flush = function() {
 }
 
 // NoticeResponse (B)
-PGConn.prototype._B_N = function(reader) {
+PGConn.prototype._B_N = function(reader: MsgReader) {
     const notices = [];
 
     while (reader.view.getUint8(reader.pos) != 0) {
@@ -341,7 +341,7 @@ PGConn.prototype._B_N = function(reader) {
 };
 
 // ParameterStatus (B)
-PGConn.prototype._B_S = function(reader) {
+PGConn.prototype._B_S = function(reader: MsgReader) {
     const param = {
         name: reader.string(),
         value: reader.string()
@@ -374,7 +374,7 @@ PGConn.prototype.parse = function(name: string, sqlQuery: string, paramTypes: Ar
 };
 
 // ParseComplete (B)
-PGConn.prototype._B_1 = function(reader) {
+PGConn.prototype._B_1 = function(reader: MsgReader) {
     this.dispatchEvent(new CustomEvent("ParseComplete"));
 }
 
@@ -409,7 +409,7 @@ PGConn.prototype.query = function(sqlString: string) {
 };
 
 // ReadyForQuery (B)
-PGConn.prototype._B_Z = function(reader) {
+PGConn.prototype._B_Z = function(reader: MsgReader) {
     const status = reader.char8();
     const event = new CustomEvent("ReadyForQuery", {
         detail: {
@@ -421,7 +421,7 @@ PGConn.prototype._B_Z = function(reader) {
 };
 
 // RowDescription (B)
-PGConn.prototype._B_T = function(reader) {
+PGConn.prototype._B_T = function(reader: MsgReader) {
     const fields = [];
     const nFields = reader.int16();
 
