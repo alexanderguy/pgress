@@ -135,6 +135,12 @@ const expectEvents = function(pg, msg, events) {
             let count = received[e.type] || 0;
             count += 1;
             received[e.type] = count;
+
+            // XXX - We need a better type check.
+            if (typeof events[key] !== "number") {
+                events[key].cb(e);
+            }
+
         };
 
         callbacks[key] = cb;
@@ -144,7 +150,12 @@ const expectEvents = function(pg, msg, events) {
     pg.recv(msg);
 
     for (const key of Object.keys(events)) {
-        assert.equal(events[key], received[key]);
+        if (typeof events[key] === 'number') {
+            assert.equal(events[key], received[key]);
+        } else {
+            assert.equal(events[key].count, received[key]);
+        }
+
         pg.removeEventListener(key, callbacks[key]);
     }
 };
@@ -163,6 +174,30 @@ describe('PGConn', function() {
 
             expectEvents(pg, w.finish(), {
                 "AuthenticationOk": 1
+            });
+        });
+
+        it("AuthenticationMD5Password", function() {
+            const w = new MsgWriter("R");
+            w.int32(5);
+            w.uint8array([0xDE, 0xAD, 0xBE, 0xEF]);
+
+            expectEvents(pg, w.finish(), {
+                "AuthenticationMD5Password": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.deepEqual(new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]), e.detail.salt);
+                    }
+                }
+            });
+        });
+
+        it("AuthenticationError", function() {
+            const w = new MsgWriter("R");
+            w.int32(666);
+
+            expectEvents(pg, w.finish(), {
+                "error": 1
             });
         });
 
