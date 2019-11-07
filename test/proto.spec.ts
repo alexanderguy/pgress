@@ -2,6 +2,11 @@ import { strict as assert } from 'assert';
 import { EventDispatcher, PGConn } from "../src/proto";
 import { MsgReader, MsgWriter } from "../src/msg";
 
+// XXX - FIXTHIS - This MD5 module is being barfed on by tsc, so just
+// hide it as any behind a webpack require.
+declare function require(module: string): any;
+const md5 = require("../src/md5");
+
 describe('EventDispatcher', function() {
     describe('SimpleSingle', function() {
         const d = new EventDispatcher();
@@ -169,7 +174,7 @@ const expectEvents = function(pg, msg, events) {
 
 
 describe('PGConn', function() {
-    describe('basicMessages', function() {
+    describe('basicPositive', function() {
         const pg = new PGConn();
         const sock = new SocketMock();
 
@@ -224,21 +229,19 @@ describe('PGConn', function() {
         });
 
         it("BackendKeyData", function() {
-            let events = 0;
-            const cb = (e: CustomEvent) => {
-                events += 1;
-                assert.equal(e.detail["processId"], 42);
-                assert.equal(e.detail["secretKey"], -1);
-            };
-
-            pg.addEventListener("BackendKeyData", cb);
             const w = new MsgWriter("K");
             w.int32(42);
             w.int32(-1);
-            pg.recv(w.finish());
-            pg.removeEventListener("BackendKeyData");
 
-            assert.equal(events, 1);
+            expectEvents(pg, w.finish(), {
+                "BackendKeyData": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail["processId"], 42);
+                        assert.equal(e.detail["secretKey"], -1);
+                    }
+                }
+            });
         });
 
         it("Bind", function() {
@@ -271,19 +274,10 @@ describe('PGConn', function() {
         });
 
         it("BindComplete", function() {
-            let events = 0;
-            const cb = () => {
-                events += 1;
-            };
-
-            pg.addEventListener("BindComplete", cb);
-
             const w = new MsgWriter("2");
-            pg.recv(w.finish());
-
-            pg.removeEventListener("BindComplete", cb);
-
-            assert.equal(events, 1);
+            expectEvents(pg, w.finish(), {
+                "BindComplete": 1
+            });
         });
 
         it("Close", function() {
@@ -305,19 +299,217 @@ describe('PGConn', function() {
         });
 
         it("CommandComplete", function() {
-            let events = 0;
-            const cb = (e: CustomEvent) => {
-                events += 1;
-                assert.equal(e.detail, "myTag");
-            };
-
-            pg.addEventListener("CommandComplete", cb);
             const w = new MsgWriter("C");
             w.string("myTag");
-            pg.recv(w.finish());
-            pg.removeEventListener("CommandComplete");
 
-            assert.equal(events, 1);
+            expectEvents(pg, w.finish(), {
+                "CommandComplete": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail, "myTag");
+                    }
+                }
+            });
+        });
+
+        it("Describe", function() {
+            pg.describe("t", "name");
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader()
+            const ar = new AssertReader(r, "D");
+
+            ar.char8("t");
+            ar.string("name");
+            ar.done();
+        });
+
+        it("EmptyQueryResponse", function() {
+            const w = new MsgWriter("I");
+            expectEvents(pg, w.finish(), {
+                "EmptyQueryResponse": 1
+            });
+        });
+
+        it("ErrorResponse", function() {
+            const w = new MsgWriter("E");
+            w.char8('A');
+            w.string("errorA");
+            w.char8('B');
+            w.string("errorB");
+            w.uint8(0);
+
+            expectEvents(pg, w.finish(), {
+                "ErrorResponse": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.length, 2);
+                        assert.deepEqual(e.detail[0], { code: "A", msg: "errorA" });
+                        assert.deepEqual(e.detail[1], { code: "B", msg: "errorB" });
+                    }
+                }
+            });
+        });
+
+        it("Execute", function() {
+            pg.execute("portal", 42);
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, "E");
+            ar.string("portal");
+            ar.int32(42);
+            ar.done();
+        });
+
+        it("Flush", function() {
+            pg.flush();
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, "H");
+            ar.done();
+        });
+
+        it("NoticeResponse", function() {
+            const w = new MsgWriter("N");
+            w.char8('A');
+            w.string("msgA");
+            w.char8('B');
+            w.string("msgB");
+            w.uint8(0);
+
+            expectEvents(pg, w.finish(), {
+                "NoticeResponse": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.length, 2);
+                        assert.deepEqual(e.detail[0], { code: "A", msg: "msgA" });
+                        assert.deepEqual(e.detail[1], { code: "B", msg: "msgB" });
+                    }
+                }
+            });
+        });
+
+        it("ParameterStatus", function() {
+            const w = new MsgWriter("S");
+            w.string("name");
+            w.string("value");
+
+            expectEvents(pg, w.finish(), {
+                "ParameterStatus": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.name, "name");
+                        assert.equal(e.detail.value, "value");
+                    }
+                }
+            });
+        });
+
+        it("Parse", function() {
+            pg.parse("name", "query", [1, 2, 3]);
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, 'P');
+            ar.string("name");
+            ar.string("query");
+            ar.int16(3);
+            ar.int32(1);
+            ar.int32(2);
+            ar.int32(3);
+            ar.done();
+        });
+
+        it("ParseComplete", function() {
+            const w = new MsgWriter('1');
+
+            expectEvents(pg, w.finish(), {
+                "ParseComplete": 1
+            });
+        });
+
+        it("PasswordMessage", function() {
+            const passHash = md5.hex("passworduser");
+            const hashRes = md5.create();
+
+            hashRes.update(passHash);
+            hashRes.update("salt");
+
+            const hashHex = "md5" + hashRes.hex();
+
+            pg.passwordMessage("user", "salt", "password");
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, 'p');
+            ar.string(hashHex);
+            ar.done();
+        });
+
+        it("PortalSuspended", function() {
+            const w = new MsgWriter('s');
+
+            expectEvents(pg, w.finish(), {
+                "PortalSuspended": 1
+            });
+        });
+
+        it("Query", function() {
+            pg.query("query");
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, 'Q');
+            ar.string("query");
+            ar.done();
+        });
+
+        it("ReadyForQuery", function() {
+            const w = new MsgWriter('Z');
+            w.char8('B');
+
+            expectEvents(pg, w.finish(), {
+                "ReadyForQuery": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.status, 'B');
+                    }
+                }
+            }
+            );
+        });
+
+        it("RowDescription", function() {
+            const fields = [
+                { name: "name1", tableOID: 1, attrN: 2, oid: 3, size: 4, modifier: 5, format: "binary" },
+                { name: "name2", tableOID: 1, attrN: 2, oid: 3, size: 4, modifier: 5, format: "binary" }
+            ];
+
+            const w = new MsgWriter("T");
+            w.int16(2);
+
+            w.string("name1");
+            w.int32(1);
+            w.int16(2);
+            w.int32(3);
+            w.int16(4);
+            w.int32(5);
+            w.int16(1);
+
+            w.string("name2");
+            w.int32(1);
+            w.int16(2);
+            w.int32(3);
+            w.int16(4);
+            w.int32(5);
+            w.int16(1);
+
+            expectEvents(pg, w.finish(), {
+                "RowDescription": {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.fields.length, 2);
+                        assert.deepEqual(e.detail.fields[0], fields[0]);
+                        assert.deepEqual(e.detail.fields[1], fields[1]);
+                    }
+                }
+            });
         });
 
         it("StartupMessage", function() {
@@ -335,6 +527,22 @@ describe('PGConn', function() {
             ar.string("param2");
             ar.uint8(0);
 
+            ar.done();
+        });
+
+        it("Sync", function() {
+            pg.sync();
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, 'S');
+            ar.done();
+        });
+
+        it("Terminate", function() {
+            pg.terminate();
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r, 'X');
             ar.done();
         });
     });
