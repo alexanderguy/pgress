@@ -455,7 +455,7 @@ PGConn.prototype._B_T = function(reader: MsgReader) {
 };
 
 // StartupMessage (F)
-PGConn.prototype.startupMessage = function(params) {
+PGConn.prototype.startupMessage = function(params: { [key: string]: string; }) {
     const msg = new MsgWriter();
 
     // Version
