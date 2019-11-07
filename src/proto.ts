@@ -189,7 +189,6 @@ PGConn.prototype._B_K = function(reader) {
 
 // Bind (F)
 PGConn.prototype.bind = function(portalName: string, preparedName: string, paramFormats: Array<string>, params: Array<any>, resultFormats: Array<string>) {
-    let i;
     const msg = new MsgWriter('B');
 
     portalName = portalName || "";
@@ -212,14 +211,14 @@ PGConn.prototype.bind = function(portalName: string, preparedName: string, param
 
     // Parameter Formats
     msg.int16(paramFormats.length);
-    for (i = 0; i < paramFormats.length; i++) {
+    for (let i = 0; i < paramFormats.length; i++) {
         msg.int16(_encodeFormat(paramFormats[i]));
     }
 
     // Parameters
     const enc = new TextEncoder();
     msg.int16(params.length);
-    for (i = 0; i < params.length; i++) {
+    for (let i = 0; i < params.length; i++) {
         const buf = enc.encode(params[i]);
         msg.int32(buf.length);
         msg.uint8array(buf);
@@ -227,7 +226,7 @@ PGConn.prototype.bind = function(portalName: string, preparedName: string, param
 
     // Result Formats
     msg.int16(resultFormats.length);
-    for (i = 0; i < resultFormats.length; i++) {
+    for (let i = 0; i < resultFormats.length; i++) {
         msg.int16(_encodeFormat(resultFormats[i]));
     }
 
