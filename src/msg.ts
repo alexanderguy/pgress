@@ -9,7 +9,7 @@ class MsgReader {
 
     _advance(n: number) {
         this.pos += n;
-    };
+    }
 
     left(): number {
         return this.view.byteLength - this.pos;
