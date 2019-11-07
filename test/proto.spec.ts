@@ -126,6 +126,30 @@ class AssertReader {
     }
 }
 
+const expectEvents = function(pg, msg, events) {
+    let callbacks = {};
+    let received = {};
+
+    for (const key of Object.keys(events)) {
+        let cb = function(e: Event) {
+            let count = received[e.type] || 0;
+            count += 1;
+            received[e.type] = count;
+        };
+
+        callbacks[key] = cb;
+        pg.addEventListener(key, cb);
+
+    }
+    pg.recv(msg);
+
+    for (const key of Object.keys(events)) {
+        assert.equal(events[key], received[key]);
+        pg.removeEventListener(key, callbacks[key]);
+    }
+};
+
+
 describe('PGConn', function() {
     describe('basicMessages', function() {
         const pg = new PGConn();
