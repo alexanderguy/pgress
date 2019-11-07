@@ -9,3 +9,5 @@ CustomEvent = function (eventType, params) {
     this.type = eventType;
     this.detail = params.detail;
 };
+
+ErrorEvent = CustomEvent;
