@@ -7,69 +7,73 @@ declare function require(module: string): any;
 const md5 = require("./md5");
 // XXX - FIXTHIS
 
-export const EventDispatcher = function(): void {
-    this._events = {};
-};
+export class EventDispatcher implements EventTarget {
+    private _events: object
 
-EventDispatcher.prototype.addEventListener = function(eventType: string, f: EventListener) {
-    eventType = eventType.toLowerCase();
-
-    let events = this._events[eventType];
-
-    if (!events) {
-        events = [];
+    constructor() {
+        this._events = {};
     }
 
-    events.push(f);
+    addEventListener(eventType: string, f: EventListener) {
+        eventType = eventType.toLowerCase();
 
-    this._events[eventType] = events;
-};
+        let events = this._events[eventType];
 
-EventDispatcher.prototype.dispatchEvent = function(event: CustomEvent) {
-    const eventType = event.type.toLowerCase();
+        if (!events) {
+            events = [];
+        }
 
-    log.debug("event type is:", eventType, event);
+        events.push(f);
 
-    const handlers = this._events[eventType];
+        this._events[eventType] = events;
+    }
 
-    if (!handlers) {
+    dispatchEvent(event: CustomEvent) {
+        const eventType = event.type.toLowerCase();
+
+        log.debug("event type is:", eventType, event);
+
+        const handlers = this._events[eventType];
+
+        if (!handlers) {
+            return true;
+        }
+
+        // XXX - Handle canceling and whatnot here.
+        for (let i = 0; i < handlers.length; i++) {
+            handlers[i](event);
+        }
+
         return true;
     }
 
-    // XXX - Handle canceling and whatnot here.
-    for (let i = 0; i < handlers.length; i++) {
-        handlers[i](event);
-    }
+    removeEventListener(eventType: string, listener: EventListener) {
+        const handlers = this._events[eventType.toLowerCase()];
 
-    return true;
-};
-
-EventDispatcher.prototype.removeEventListener = function(eventType: string, listener: EventListener) {
-    const handlers = this._events[eventType.toLowerCase()];
-
-    if (!handlers) {
-        return;
-    }
-
-    const newHandlers = [];
-
-    let handler: EventListener;
-    for (let i = 0; i < handlers.length; i++) {
-        handler = handlers[i];
-
-        if (handler != listener) {
-            newHandlers.push(handler);
+        if (!handlers) {
+            return;
         }
-    }
 
-    this._events[eventType.toLowerCase()] = newHandlers;
-};
+        const newHandlers = [];
+
+        let handler: EventListener;
+        for (let i = 0; i < handlers.length; i++) {
+            handler = handlers[i];
+
+            if (handler != listener) {
+                newHandlers.push(handler);
+            }
+        }
+
+        this._events[eventType.toLowerCase()] = newHandlers;
+    }
+}
 
 export const PGConn = function(): void {
     this.buf = new ArrayBuffer(0);
 };
 
-PGConn.prototype = new EventDispatcher();
+PGConn.prototype = Object.create(new EventDispatcher());
 
 PGConn.prototype.attachSocket = function(sock: WebSocket) {
     this.conn = sock;
