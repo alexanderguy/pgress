@@ -11,7 +11,7 @@ export const EventDispatcher = function(): void {
     this._events = {};
 };
 
-EventDispatcher.prototype.addEventListener = function(eventType: string, f) {
+EventDispatcher.prototype.addEventListener = function(eventType: string, f: EventListener) {
     eventType = eventType.toLowerCase();
 
     let events = this._events[eventType];
@@ -44,7 +44,7 @@ EventDispatcher.prototype.dispatchEvent = function(event: CustomEvent) {
     return true;
 };
 
-EventDispatcher.prototype.removeEventListener = function(eventType: string, listener) {
+EventDispatcher.prototype.removeEventListener = function(eventType: string, listener: EventListener) {
     const handlers = this._events[eventType.toLowerCase()];
 
     if (!handlers) {
@@ -53,7 +53,7 @@ EventDispatcher.prototype.removeEventListener = function(eventType: string, list
 
     const newHandlers = [];
 
-    let handler;
+    let handler: EventListener;
     for (let i = 0; i < handlers.length; i++) {
         handler = handlers[i];
 
@@ -71,7 +71,7 @@ export const PGConn = function(): void {
 
 PGConn.prototype = new EventDispatcher();
 
-PGConn.prototype.attachSocket = function(sock) {
+PGConn.prototype.attachSocket = function(sock: WebSocket) {
     this.conn = sock;
 };
 
@@ -83,7 +83,7 @@ PGConn.prototype.socketError = function() {
     this.conn = undefined;
 };
 
-PGConn.prototype.recv = function(incoming) {
+PGConn.prototype.recv = function(incoming: ArrayBuffer) {
     // Merge the incoming data into the existing buffer.
     const newBuf = new ArrayBuffer(this.buf.byteLength + incoming.byteLength);
     {
@@ -123,7 +123,7 @@ PGConn.prototype.recv = function(incoming) {
     }
 }
 
-PGConn.prototype._dispatchMsg = function(buf) {
+PGConn.prototype._dispatchMsg = function(buf: ArrayBuffer) {
     const view = new DataView(buf);
 
     if (0) {
@@ -147,7 +147,7 @@ PGConn.prototype._dispatchMsg = function(buf) {
 // AuthenticationOk (B) / AuthenticationMD5Password (B)
 PGConn.prototype._B_R = function(r) {
     const authType = r.int32();
-    let event;
+    let event: Event;
 
     switch (authType) {
         case 0:
