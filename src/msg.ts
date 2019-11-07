@@ -1,66 +1,70 @@
+class MsgReader {
+    view: DataView
+    pos: number
 
-function MsgReader(view: DataView): void {
-    this.view = view;
-    this.pos = 0;
-}
-
-MsgReader.prototype._advance = function(n: number) {
-    this.pos += n;
-};
-
-MsgReader.prototype.left = function() {
-    return this.view.byteLength - this.pos;
-};
-
-MsgReader.prototype.char8 = function() {
-    let val = this.uint8();
-    return String.fromCharCode(val);
-}
-
-MsgReader.prototype.uint8 = function() {
-    let val = this.view.getUint8(this.pos);
-    this._advance(1);
-
-    return val;
-}
-
-MsgReader.prototype.uint8array = function(n: number) {
-    let buf = new Uint8Array(this.view.buffer, this.view.byteOffset + this.pos, n);
-    this._advance(n);
-    return buf;
-}
-
-MsgReader.prototype.int32 = function() {
-    let val = this.view.getInt32(this.pos);
-    this._advance(4);
-
-    return val;
-}
-
-MsgReader.prototype.int16 = function() {
-    let val = this.view.getInt16(this.pos);
-    this._advance(2);
-
-    return val;
-}
-
-MsgReader.prototype.string = function() {
-    let buf = new Uint8Array(this.view.buffer);
-    // Offset from the view base, plus the current position.
-    let bufOffset = this.view.byteOffset + this.pos;
-
-    let stringEnd = buf.indexOf(0, bufOffset);
-
-    if (stringEnd === -1) {
-        throw "couldn't find zero termination!";
+    constructor(view: DataView) {
+        this.view = view;
+        this.pos = 0;
     }
 
-    let t = buf.slice(bufOffset, stringEnd);
-    let s = new TextDecoder('utf-8').decode(t);
+    _advance(n: number) {
+        this.pos += n;
+    };
 
-    this._advance((stringEnd - bufOffset) + 1);
+    left(): number {
+        return this.view.byteLength - this.pos;
+    }
 
-    return s;
+    char8(): string {
+        let val = this.uint8();
+        return String.fromCharCode(val);
+    }
+
+    uint8(): number {
+        let val = this.view.getUint8(this.pos);
+        this._advance(1);
+
+        return val;
+    }
+
+    uint8array(n: number): Uint8Array {
+        let buf = new Uint8Array(this.view.buffer, this.view.byteOffset + this.pos, n);
+        this._advance(n);
+        return buf;
+    }
+
+    int32(): number {
+        let val = this.view.getInt32(this.pos);
+        this._advance(4);
+
+        return val;
+    }
+
+    int16(): number {
+        let val = this.view.getInt16(this.pos);
+        this._advance(2);
+
+        return val;
+    }
+
+    string(): string {
+        let buf = new Uint8Array(this.view.buffer);
+        // Offset from the view base, plus the current position.
+        let bufOffset = this.view.byteOffset + this.pos;
+
+        let stringEnd = buf.indexOf(0, bufOffset);
+
+        if (stringEnd === -1) {
+            throw "couldn't find zero termination!";
+        }
+
+        let t = buf.slice(bufOffset, stringEnd);
+        let s = new TextDecoder('utf-8').decode(t);
+
+        this._advance((stringEnd - bufOffset) + 1);
+
+        return s;
+    }
 }
 
 function MsgWriter(id?: string): void {
