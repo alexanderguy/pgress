@@ -262,7 +262,7 @@ PGConn.prototype._B_3 = function(_reader: MsgReader) {
 // CommandComplete (B)
 PGConn.prototype._B_C = function(reader: MsgReader) {
     const tag = reader.string()
-    const event = new CustomEvent("CommandComplete")
+    const event = new CustomEvent("CommandComplete", { detail: tag })
     this.dispatchEvent(event)
 };
 

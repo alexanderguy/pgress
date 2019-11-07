@@ -217,5 +217,21 @@ describe('PGConn', function() {
 
             assert.equal(events, 1);
         });
+
+        it("commandComplete", function() {
+            let events = 0;
+            const cb = (e: CustomEvent) => {
+                events += 1;
+                assert.equal(e.detail, "myTag");
+            };
+
+            pg.addEventListener("CommandComplete", cb);
+            const w = new MsgWriter("C");
+            w.string("myTag");
+            pg.recv(w.finish());
+            pg.removeEventListener("CommandComplete");
+
+            assert.equal(events, 1);
+        });
     });
 });
