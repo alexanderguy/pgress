@@ -355,7 +355,7 @@ _Portal.prototype.noticeResponse = function(e: CustomEvent) {
     // What to do here?
 };
 
-_Portal.prototype.close = function(closeType) {
+_Portal.prototype.close = function() {
     return new Promise((resolve, reject) => {
         this.state._newQuery(this);
         this.promises.push([resolve, reject]);
@@ -393,7 +393,7 @@ _PreparedStatement.prototype.portal = function(name) {
     return portal;
 };
 
-_PreparedStatement.prototype.close = function(closeType) {
+_PreparedStatement.prototype.close = function() {
     return new Promise((resolve, reject) => {
         this.state._newQuery(this);
         this.promises.push([resolve, reject]);
