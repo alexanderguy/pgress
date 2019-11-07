@@ -142,10 +142,8 @@ PGState.prototype.extendedQuery = async function(...args: any[]) {
     const query = args.shift();
 
     const s = this.preparedStatement();
-    let p, results;
-
     await s.parse(query);
-    p = s.portal();
+    let p = s.portal();
     await p.bind([], args, []);
 
     const res = await p.execute();
