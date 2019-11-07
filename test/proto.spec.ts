@@ -157,6 +157,15 @@ describe('PGConn', function() {
 
         pg.attachSocket(sock);
 
+        it("AuthenticationOk", function() {
+            const w = new MsgWriter("R");
+            w.int32(0);
+
+            expectEvents(pg, w.finish(), {
+                "AuthenticationOk": 1
+            });
+        });
+
         it("startup", function() {
             pg.startupMessage({
                 key1: "param1",
