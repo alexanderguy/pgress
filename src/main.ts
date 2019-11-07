@@ -28,15 +28,6 @@ export const PGState = function(url: string, database: string, user: string, pas
         return name;
     };
 
-    const _getQuery = function() {
-        if (that._curQuery.length < 1) {
-            log.warn("got a command complete, but there's no running query to proxy to?");
-            return undefined;
-        }
-
-        return that._curQuery[0];
-    };
-
     conn.addEventListener("AuthenticationMD5Password", function(e: CustomEvent) {
         conn.passwordMessage(that.user, e.detail.salt, that.password);
     });
