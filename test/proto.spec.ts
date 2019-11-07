@@ -208,34 +208,45 @@ describe('PGConn', function() {
             });
         });
 
-        it("startup", function() {
-            pg.startupMessage({
-                key1: "param1",
-                key2: "param2",
+        it("BackendKeyData", function() {
+            const w = new MsgWriter("K");
+            w.int32(-5);
+            w.int32(-6);
+            expectEvents(pg, w.finish(), {
+                BackendKeyData: {
+                    count: 1,
+                    cb: (e: CustomEvent) => {
+                        assert.equal(e.detail.processId, -5);
+                        assert.equal(e.detail.secretKey, -6);
+                    }
+                }
             });
-            assert.equal(sock.packetCount(), 1);
-            const r = sock.popReader();
-            const ar = new AssertReader(r);
-
-            ar.int32(33);
-            ar.int32(196608);
-            ar.string("key1");
-            ar.string("param1");
-            ar.string("key2");
-            ar.string("param2");
-            ar.uint8(0);
-
-            ar.done();
         });
 
-        it("bind", function() {
+        it("BackendKeyData", function() {
+            let events = 0;
+            const cb = (e: CustomEvent) => {
+                events += 1;
+                assert.equal(e.detail["processId"], 42);
+                assert.equal(e.detail["secretKey"], -1);
+            };
+
+            pg.addEventListener("BackendKeyData", cb);
+            const w = new MsgWriter("K");
+            w.int32(42);
+            w.int32(-1);
+            pg.recv(w.finish());
+            pg.removeEventListener("BackendKeyData");
+
+            assert.equal(events, 1);
+        });
+
+        it("Bind", function() {
             pg.bind("portalName", "preparedName", ["binary", "somethingElse"], ["param0", "param1"], ["somethingElse", "binary"]);
             assert.equal(sock.packetCount(), 1);
             const r = sock.popReader()
-            const ar = new AssertReader(r);
+            const ar = new AssertReader(r, "B");
 
-            ar.char8("B");
-            ar.int32(62);
             ar.string("portalName");
             ar.string("preparedName");
 
@@ -259,7 +270,7 @@ describe('PGConn', function() {
             ar.done();
         });
 
-        it("bindComplete", function() {
+        it("BindComplete", function() {
             let events = 0;
             const cb = () => {
                 events += 1;
@@ -275,25 +286,25 @@ describe('PGConn', function() {
             assert.equal(events, 1);
         });
 
-        it("backendKeyData", function() {
-            let events = 0;
-            const cb = (e: CustomEvent) => {
-                events += 1;
-                assert.equal(e.detail["processId"], 42);
-                assert.equal(e.detail["secretKey"], -1);
-            };
+        it("Close", function() {
+            pg.close("L", "someName");
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader()
+            const ar = new AssertReader(r, "C");
 
-            pg.addEventListener("BackendKeyData", cb);
-            const w = new MsgWriter("K");
-            w.int32(42);
-            w.int32(-1);
-            pg.recv(w.finish());
-            pg.removeEventListener("BackendKeyData");
-
-            assert.equal(events, 1);
+            ar.char8("L");
+            ar.string("someName");
+            ar.done();
         });
 
-        it("commandComplete", function() {
+        it("CloseComplete", function() {
+            const w = new MsgWriter("3");
+            expectEvents(pg, w.finish(), {
+                "CloseComplete": 1
+            });
+        });
+
+        it("CommandComplete", function() {
             let events = 0;
             const cb = (e: CustomEvent) => {
                 events += 1;
@@ -307,6 +318,24 @@ describe('PGConn', function() {
             pg.removeEventListener("CommandComplete");
 
             assert.equal(events, 1);
+        });
+
+        it("StartupMessage", function() {
+            pg.startupMessage({
+                key1: "param1",
+                key2: "param2",
+            });
+            assert.equal(sock.packetCount(), 1);
+            const r = sock.popReader();
+            const ar = new AssertReader(r);
+            ar.int32(196608);
+            ar.string("key1");
+            ar.string("param1");
+            ar.string("key2");
+            ar.string("param2");
+            ar.uint8(0);
+
+            ar.done();
         });
     });
 });
