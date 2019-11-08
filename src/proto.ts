@@ -139,17 +139,25 @@ export class PGConn extends EventDispatcher {
 
         const r = new MsgReader(view);
         const msgCode = r.char8();
+
+        // Look up the handler for this specific message type, and
+        // call it with the reader.
         const handler = this["_backend_" + msgCode];
 
-        r.int32(); // Length
+        r.int32(); // Length - not needed anymore.
 
         if (handler) {
             handler.call(this, r);
         } else {
             log.warn("unknown message code:", msgCode);
-            log.warn(new Uint8Array(buf));
+            // XXX - Throw an exception here?
         }
     }
+
+    //
+    // These methods are organized in the order of the PostgreSQL documentation's API format listings.
+    // Please see that document for more information on the structure and arguments of the methods.
+    //
 
     // AuthenticationOk (B) / AuthenticationMD5Password (B)
     _backend_R(r: MsgReader) {
@@ -164,6 +172,7 @@ export class PGConn extends EventDispatcher {
             case 5:
                 // MD5 Password Request
                 if (r.left() != 4) {
+                    // XXX - Throw an exception here?
                     log.error("message size not what is expected.");
                     return;
                 }
@@ -176,7 +185,7 @@ export class PGConn extends EventDispatcher {
                 event = new CustomEvent("AuthenticationMD5Password", { detail: detail });
                 break;
             default:
-                log.error("unknown authentication message for code:", authType);
+                // XXX - Should this be an exception?
                 event = new ErrorEvent("error", { message: "unknown authentication message" });
                 break;
         }
