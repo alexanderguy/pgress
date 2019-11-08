@@ -69,423 +69,427 @@ export class EventDispatcher implements EventTarget {
     }
 }
 
-export const PGConn = function(): void {
-    this.buf = new ArrayBuffer(0);
-};
+export class PGConn extends EventDispatcher {
+    buf: ArrayBuffer
+    conn: any
 
-PGConn.prototype = Object.create(new EventDispatcher());
-
-PGConn.prototype.attachSocket = function(sock: WebSocket) {
-    this.conn = sock;
-};
-
-PGConn.prototype.socketClosed = function() {
-    this.conn = undefined;
-};
-
-PGConn.prototype.socketError = function() {
-    this.conn = undefined;
-};
-
-PGConn.prototype.recv = function(incoming: ArrayBuffer) {
-    // Merge the incoming data into the existing buffer.
-    const newBuf = new ArrayBuffer(this.buf.byteLength + incoming.byteLength);
-    {
-        const tmp = new Uint8Array(newBuf);
-        tmp.set(new Uint8Array(this.buf));
-        tmp.set(new Uint8Array(incoming), this.buf.byteLength);
+    constructor() {
+        super()
+        this.buf = new ArrayBuffer(0);
     }
 
-    this.buf = newBuf;
+    attachSocket(sock: any) {
+        this.conn = sock;
+    }
 
-    let done = false;
-    while (!done) {
-        // We don't have a message header.
-        if (this.buf.byteLength === 0) {
-            done = true;
-            return;
+    socketClosed() {
+        this.conn = undefined;
+    }
+
+    socketError() {
+        this.conn = undefined;
+    }
+
+    recv(incoming: ArrayBuffer) {
+        // Merge the incoming data into the existing buffer.
+        const newBuf = new ArrayBuffer(this.buf.byteLength + incoming.byteLength);
+        {
+            const tmp = new Uint8Array(newBuf);
+            tmp.set(new Uint8Array(this.buf));
+            tmp.set(new Uint8Array(incoming), this.buf.byteLength);
         }
 
-        if (this.buf.byteLength < 5) {
-            log.debug("waiting for more data, we don't have enough to parse the message header.");
-            done = true
-            continue;
-        }
+        this.buf = newBuf;
 
-        const view = new DataView(this.buf);
-        const byteLength = view.getInt32(1);
-        if (this.buf.byteLength < (byteLength + 1)) {
-            log.debug("we got length, but it's not enough", this.buf.byteLength, byteLength + 1);
-            done = true;
-            continue
-        }
-
-        const msg = this.buf.slice(0, byteLength + 1);
-        this.buf = this.buf.slice(byteLength + 1);
-
-        this._dispatchMsg(msg);
-    }
-}
-
-PGConn.prototype._dispatchMsg = function(buf: ArrayBuffer) {
-    const view = new DataView(buf);
-
-    if (0) {
-        log.debug("got message:", new Uint8Array(buf));
-    }
-
-    const r = new MsgReader(view);
-    const msgCode = r.char8();
-    const handler = this["_B_" + msgCode];
-
-    r.int32(); // Length
-
-    if (handler) {
-        handler.call(this, r);
-    } else {
-        log.warn("unknown message code:", msgCode);
-        log.warn(new Uint8Array(buf));
-    }
-};
-
-// AuthenticationOk (B) / AuthenticationMD5Password (B)
-PGConn.prototype._B_R = function(r: MsgReader) {
-    const authType = r.int32();
-    let event: Event;
-
-    switch (authType) {
-        case 0:
-            // AuthenticationOk
-            event = new CustomEvent("AuthenticationOk");
-            break;
-        case 5:
-            // MD5 Password Request
-            if (r.left() != 4) {
-                log.error("message size not what is expected.");
+        let done = false;
+        while (!done) {
+            // We don't have a message header.
+            if (this.buf.byteLength === 0) {
+                done = true;
                 return;
             }
 
-            const salt = r.uint8array(4);
-            const detail = {
-                salt: salt
-            };
+            if (this.buf.byteLength < 5) {
+                log.debug("waiting for more data, we don't have enough to parse the message header.");
+                done = true
+                continue;
+            }
 
-            event = new CustomEvent("AuthenticationMD5Password", { detail: detail });
-            break;
-        default:
-            log.error("unknown authentication message for code:", authType);
-            event = new ErrorEvent("error", { message: "unknown authentication message" });
-            break;
+            const view = new DataView(this.buf);
+            const byteLength = view.getInt32(1);
+            if (this.buf.byteLength < (byteLength + 1)) {
+                log.debug("we got length, but it's not enough", this.buf.byteLength, byteLength + 1);
+                done = true;
+                continue
+            }
+
+            const msg = this.buf.slice(0, byteLength + 1);
+            this.buf = this.buf.slice(byteLength + 1);
+
+            this._dispatchMsg(msg);
+        }
     }
 
-    this.dispatchEvent(event);
-}
+    _dispatchMsg(buf: ArrayBuffer) {
+        const view = new DataView(buf);
 
-// BackendKeyData (B)
-PGConn.prototype._B_K = function(reader: MsgReader) {
-    const keyData = {
-        processId: reader.int32(),
-        secretKey: reader.int32()
-    };
-
-    this.dispatchEvent(new CustomEvent("BackendKeyData", { detail: keyData }));
-}
-
-// Bind (F)
-PGConn.prototype.bind = function(portalName: string, preparedName: string, paramFormats: Array<string>, params: Array<any>, resultFormats: Array<string>) {
-    const msg = new MsgWriter('B');
-
-    portalName = portalName || "";
-    preparedName = preparedName || "";
-    paramFormats = paramFormats || [];
-    params = params || [];
-    resultFormats = resultFormats || [];
-
-    msg.string(portalName);
-    msg.string(preparedName);
-
-    const _encodeFormat = function(v: string) {
-        if (v === "binary") {
-            return 1;
+        if (0) {
+            log.debug("got message:", new Uint8Array(buf));
         }
 
-        // Otherwise, we want text.
-        return 0;
-    }
+        const r = new MsgReader(view);
+        const msgCode = r.char8();
+        const handler = this["_B_" + msgCode];
 
-    // Parameter Formats
-    msg.int16(paramFormats.length);
-    for (let i = 0; i < paramFormats.length; i++) {
-        msg.int16(_encodeFormat(paramFormats[i]));
-    }
+        r.int32(); // Length
 
-    // Parameters
-    const enc = new TextEncoder();
-    msg.int16(params.length);
-    for (let i = 0; i < params.length; i++) {
-        const buf = enc.encode(params[i]);
-        msg.int32(buf.length);
-        msg.uint8array(buf);
-    }
-
-    // Result Formats
-    msg.int16(resultFormats.length);
-    for (let i = 0; i < resultFormats.length; i++) {
-        msg.int16(_encodeFormat(resultFormats[i]));
-    }
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-}
-
-// BindComplete (B)
-PGConn.prototype._B_2 = function(_reader: MsgReader) {
-    this.dispatchEvent(new CustomEvent("BindComplete"));
-}
-
-// Close (F)
-PGConn.prototype.close = function(closeType: string, name: string) {
-    const msg = new MsgWriter("C");
-    msg.char8(closeType);
-    msg.string(name);
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
-
-// CloseComplete (B)
-PGConn.prototype._B_3 = function(_reader: MsgReader) {
-    const event = new CustomEvent("CloseComplete")
-    this.dispatchEvent(event)
-};
-
-// CommandComplete (B)
-PGConn.prototype._B_C = function(reader: MsgReader) {
-    const tag = reader.string()
-    const event = new CustomEvent("CommandComplete", { detail: tag })
-    this.dispatchEvent(event)
-};
-
-// DataRow (B)
-PGConn.prototype._B_D = function(reader: MsgReader) {
-    const nCols = reader.int16();
-    const cols = [];
-
-    for (let i = 0; i < nCols; i++) {
-        const nBytes = reader.int32();
-        if (nBytes === -1) {
-            cols.push(null);
+        if (handler) {
+            handler.call(this, r);
         } else {
-            cols.push(reader.uint8array(nBytes));
+            log.warn("unknown message code:", msgCode);
+            log.warn(new Uint8Array(buf));
         }
     }
 
-    const event = new CustomEvent("DataRow", {
-        detail: cols
-    });
-    this.dispatchEvent(event);
-}
+    // AuthenticationOk (B) / AuthenticationMD5Password (B)
+    _B_R(r: MsgReader) {
+        const authType = r.int32();
+        let event: Event;
 
-// Describe (F)
-PGConn.prototype.describe = function(descType: string, name: string) {
-    const msg = new MsgWriter("D");
-    msg.char8(descType);
-    msg.string(name);
+        switch (authType) {
+            case 0:
+                // AuthenticationOk
+                event = new CustomEvent("AuthenticationOk");
+                break;
+            case 5:
+                // MD5 Password Request
+                if (r.left() != 4) {
+                    log.error("message size not what is expected.");
+                    return;
+                }
 
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
+                const salt = r.uint8array(4);
+                const detail = {
+                    salt: salt
+                }
 
-// EmptyQueryResponse (B)
-PGConn.prototype._B_I = function(_r: MsgReader) {
-    this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
-};
-
-// ErrorResponse (B)
-PGConn.prototype._B_E = function(r: MsgReader) {
-    const errors = [];
-
-    while (r.view.getUint8(r.pos) != 0) {
-        errors.push({ code: r.char8(), msg: r.string() });
-    }
-
-    this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
-}
-
-// Execute (F)
-PGConn.prototype.execute = function(portal: string, nRows: number) {
-    if (!nRows) {
-        nRows = 0;
-    }
-
-    const msg = new MsgWriter("E");
-    msg.string(portal);
-    msg.int32(nRows);
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
-
-// Flush (F)
-PGConn.prototype.flush = function() {
-    const msg = new MsgWriter("H");
-    const packet = msg.finish();
-    this.conn.send(packet);
-}
-
-// NoticeResponse (B)
-PGConn.prototype._B_N = function(reader: MsgReader) {
-    const notices = [];
-
-    while (reader.view.getUint8(reader.pos) != 0) {
-        notices.push({ code: reader.char8(), msg: reader.string() });
-    }
-
-    this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
-};
-
-// ParameterStatus (B)
-PGConn.prototype._B_S = function(reader: MsgReader) {
-    const param = {
-        name: reader.string(),
-        value: reader.string()
-    };
-
-    this.dispatchEvent(new CustomEvent("ParameterStatus", { detail: param }));
-}
-
-// Parse (F)
-PGConn.prototype.parse = function(name: string, sqlQuery: string, paramTypes: Array<number>) {
-    if (!name) {
-        name = "";
-    }
-
-    if (!paramTypes) {
-        paramTypes = [];
-    }
-
-    const msg = new MsgWriter('P');
-    msg.string(name);
-    msg.string(sqlQuery);
-
-    msg.int16(paramTypes.length);
-    for (let i = 0; i < paramTypes.length; i++) {
-        msg.int32(paramTypes[i]);
-    }
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
-
-// ParseComplete (B)
-PGConn.prototype._B_1 = function(_reader: MsgReader) {
-    this.dispatchEvent(new CustomEvent("ParseComplete"));
-}
-
-// PasswordMessage (F)
-PGConn.prototype.passwordMessage = function(user: string, salt: string, password: string) {
-    const passHash = md5.hex(password + user);
-    const hashRes = md5.create();
-
-    hashRes.update(passHash);
-    hashRes.update(salt);
-
-    const hashHex = "md5" + hashRes.hex();
-    const msg = new MsgWriter("p");
-    msg.string(hashHex)
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-}
-
-// PortalSuspended (B)
-PGConn.prototype._B_s = function() {
-    this.dispatchEvent(new CustomEvent("PortalSuspended"));
-}
-
-// Query (F)
-PGConn.prototype.query = function(sqlString: string) {
-    const msg = new MsgWriter("Q");
-    msg.string(sqlString);
-
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
-
-// ReadyForQuery (B)
-PGConn.prototype._B_Z = function(reader: MsgReader) {
-    const status = reader.char8();
-    const event = new CustomEvent("ReadyForQuery", {
-        detail: {
-            status: status
-        }
-    });
-
-    this.dispatchEvent(event);
-};
-
-// RowDescription (B)
-PGConn.prototype._B_T = function(reader: MsgReader) {
-    const fields = [];
-    const nFields = reader.int16();
-
-    for (let i = 0; i < nFields; i++) {
-        const f = {};
-
-        f['name'] = reader.string();
-        f['tableOID'] = reader.int32();
-        f['attrN'] = reader.int16();
-        f['oid'] = reader.int32();
-        f['size'] = reader.int16();
-        f['modifier'] = reader.int32();
-
-        if (reader.int16() === 1) {
-            f['format'] = "binary";
-        } else {
-            // XXX - This is probably a bad assumption.
-            f['format'] = "text";
+                event = new CustomEvent("AuthenticationMD5Password", { detail: detail });
+                break;
+            default:
+                log.error("unknown authentication message for code:", authType);
+                event = new ErrorEvent("error", { message: "unknown authentication message" });
+                break;
         }
 
-        fields.push(f);
+        this.dispatchEvent(event);
     }
 
-    const event = new CustomEvent("RowDescription", {
-        detail: {
-            fields: fields
+    // BackendKeyData (B)
+    _B_K(reader: MsgReader) {
+        const keyData = {
+            processId: reader.int32(),
+            secretKey: reader.int32()
         }
-    });
 
-    this.dispatchEvent(event);
-};
-
-// StartupMessage (F)
-PGConn.prototype.startupMessage = function(params: { [key: string]: string; }) {
-    const msg = new MsgWriter();
-
-    // Version
-    msg.int32(196608);
-
-    // Parameters
-    for (const key in params) {
-        msg.string(key);
-        msg.string(params[key]);
+        this.dispatchEvent(new CustomEvent("BackendKeyData", { detail: keyData }));
     }
-    msg.uint8(0);
 
-    const packet = msg.finish();
-    this.conn.send(packet);
-};
+    // Bind (F)
+    bind(portalName: string, preparedName: string, paramFormats: Array<string>, params: Array<any>, resultFormats: Array<string>) {
+        const msg = new MsgWriter('B');
 
-// Sync (F)
-PGConn.prototype.sync = function() {
-    const msg = new MsgWriter("S");
-    const packet = msg.finish();
-    this.conn.send(packet);
-}
+        portalName = portalName || "";
+        preparedName = preparedName || "";
+        paramFormats = paramFormats || [];
+        params = params || [];
+        resultFormats = resultFormats || [];
 
-// Terminate (F)
-PGConn.prototype.terminate = function() {
-    const msg = new MsgWriter("X");
-    const packet = msg.finish();
-    this.conn.send(packet);
+        msg.string(portalName);
+        msg.string(preparedName);
+
+        const _encodeFormat = function(v: string) {
+            if (v === "binary") {
+                return 1;
+            }
+
+            // Otherwise, we want text.
+            return 0;
+        }
+
+        // Parameter Formats
+        msg.int16(paramFormats.length);
+        for (let i = 0; i < paramFormats.length; i++) {
+            msg.int16(_encodeFormat(paramFormats[i]));
+        }
+
+        // Parameters
+        const enc = new TextEncoder();
+        msg.int16(params.length);
+        for (let i = 0; i < params.length; i++) {
+            const buf = enc.encode(params[i]);
+            msg.int32(buf.length);
+            msg.uint8array(buf);
+        }
+
+        // Result Formats
+        msg.int16(resultFormats.length);
+        for (let i = 0; i < resultFormats.length; i++) {
+            msg.int16(_encodeFormat(resultFormats[i]));
+        }
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // BindComplete (B)
+    _B_2(_reader: MsgReader) {
+        this.dispatchEvent(new CustomEvent("BindComplete"));
+    }
+
+    // Close (F)
+    close(closeType: string, name: string) {
+        const msg = new MsgWriter("C");
+        msg.char8(closeType);
+        msg.string(name);
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // CloseComplete (B)
+    _B_3(_reader: MsgReader) {
+        const event = new CustomEvent("CloseComplete")
+        this.dispatchEvent(event)
+    }
+
+    // CommandComplete (B)
+    _B_C(reader: MsgReader) {
+        const tag = reader.string()
+        const event = new CustomEvent("CommandComplete", { detail: tag })
+        this.dispatchEvent(event)
+    }
+
+    // DataRow (B)
+    _B_D(reader: MsgReader) {
+        const nCols = reader.int16();
+        const cols = [];
+
+        for (let i = 0; i < nCols; i++) {
+            const nBytes = reader.int32();
+            if (nBytes === -1) {
+                cols.push(null);
+            } else {
+                cols.push(reader.uint8array(nBytes));
+            }
+        }
+
+        const event = new CustomEvent("DataRow", {
+            detail: cols
+        });
+        this.dispatchEvent(event);
+    }
+
+    // Describe (F)
+    describe(descType: string, name: string) {
+        const msg = new MsgWriter("D");
+        msg.char8(descType);
+        msg.string(name);
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // EmptyQueryResponse (B)
+    _B_I(_r: MsgReader) {
+        this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
+    }
+
+    // ErrorResponse (B)
+    _B_E(r: MsgReader) {
+        const errors = [];
+
+        while (r.view.getUint8(r.pos) != 0) {
+            errors.push({ code: r.char8(), msg: r.string() });
+        }
+
+        this.dispatchEvent(new CustomEvent("ErrorResponse", { detail: errors }));
+    }
+
+    // Execute (F)
+    execute(portal: string, nRows: number) {
+        if (!nRows) {
+            nRows = 0;
+        }
+
+        const msg = new MsgWriter("E");
+        msg.string(portal);
+        msg.int32(nRows);
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // Flush (F)
+    flush() {
+        const msg = new MsgWriter("H");
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // NoticeResponse (B)
+    _B_N(reader: MsgReader) {
+        const notices = [];
+
+        while (reader.view.getUint8(reader.pos) != 0) {
+            notices.push({ code: reader.char8(), msg: reader.string() });
+        }
+
+        this.dispatchEvent(new CustomEvent("NoticeResponse", { detail: notices }));
+    }
+
+    // ParameterStatus (B)
+    _B_S(reader: MsgReader) {
+        const param = {
+            name: reader.string(),
+            value: reader.string()
+        }
+
+        this.dispatchEvent(new CustomEvent("ParameterStatus", { detail: param }));
+    }
+
+    // Parse (F)
+    parse(name: string, sqlQuery: string, paramTypes: Array<number>) {
+        if (!name) {
+            name = "";
+        }
+
+        if (!paramTypes) {
+            paramTypes = [];
+        }
+
+        const msg = new MsgWriter('P');
+        msg.string(name);
+        msg.string(sqlQuery);
+
+        msg.int16(paramTypes.length);
+        for (let i = 0; i < paramTypes.length; i++) {
+            msg.int32(paramTypes[i]);
+        }
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // ParseComplete (B)
+    _B_1(_reader: MsgReader) {
+        this.dispatchEvent(new CustomEvent("ParseComplete"));
+    }
+
+    // PasswordMessage (F)
+    passwordMessage(user: string, salt: string, password: string) {
+        const passHash = md5.hex(password + user);
+        const hashRes = md5.create();
+
+        hashRes.update(passHash);
+        hashRes.update(salt);
+
+        const hashHex = "md5" + hashRes.hex();
+        const msg = new MsgWriter("p");
+        msg.string(hashHex)
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // PortalSuspended (B)
+    _B_s() {
+        this.dispatchEvent(new CustomEvent("PortalSuspended"));
+    }
+
+    // Query (F)
+    query(sqlString: string) {
+        const msg = new MsgWriter("Q");
+        msg.string(sqlString);
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // ReadyForQuery (B)
+    _B_Z(reader: MsgReader) {
+        const status = reader.char8();
+        const event = new CustomEvent("ReadyForQuery", {
+            detail: {
+                status: status
+            }
+        });
+
+        this.dispatchEvent(event);
+    }
+
+    // RowDescription (B)
+    _B_T(reader: MsgReader) {
+        const fields = [];
+        const nFields = reader.int16();
+
+        for (let i = 0; i < nFields; i++) {
+            const f = {}
+
+            f['name'] = reader.string();
+            f['tableOID'] = reader.int32();
+            f['attrN'] = reader.int16();
+            f['oid'] = reader.int32();
+            f['size'] = reader.int16();
+            f['modifier'] = reader.int32();
+
+            if (reader.int16() === 1) {
+                f['format'] = "binary";
+            } else {
+                // XXX - This is probably a bad assumption.
+                f['format'] = "text";
+            }
+
+            fields.push(f);
+        }
+
+        const event = new CustomEvent("RowDescription", {
+            detail: {
+                fields: fields
+            }
+        });
+
+        this.dispatchEvent(event);
+    }
+
+    // StartupMessage (F)
+    startupMessage(params: { [key: string]: string; }) {
+        const msg = new MsgWriter();
+
+        // Version
+        msg.int32(196608);
+
+        // Parameters
+        for (const key in params) {
+            msg.string(key);
+            msg.string(params[key]);
+        }
+        msg.uint8(0);
+
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // Sync (F)
+    sync() {
+        const msg = new MsgWriter("S");
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
+
+    // Terminate (F)
+    terminate() {
+        const msg = new MsgWriter("X");
+        const packet = msg.finish();
+        this.conn.send(packet);
+    }
 }
