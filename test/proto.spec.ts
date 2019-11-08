@@ -94,7 +94,7 @@ const s2u8 = function(s: string): Uint8Array {
 }
 
 class AssertReader {
-    r: any
+    private r: MsgReader
 
     constructor(reader: MsgReader, id?: string) {
         this.r = reader
