@@ -139,7 +139,7 @@ export class PGConn extends EventDispatcher {
 
         const r = new MsgReader(view);
         const msgCode = r.char8();
-        const handler = this["_B_" + msgCode];
+        const handler = this["_backend_" + msgCode];
 
         r.int32(); // Length
 
@@ -152,7 +152,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // AuthenticationOk (B) / AuthenticationMD5Password (B)
-    _B_R(r: MsgReader) {
+    _backend_R(r: MsgReader) {
         const authType = r.int32();
         let event: Event;
 
@@ -185,7 +185,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // BackendKeyData (B)
-    _B_K(reader: MsgReader) {
+    _backend_K(reader: MsgReader) {
         const keyData = {
             processId: reader.int32(),
             secretKey: reader.int32()
@@ -242,7 +242,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // BindComplete (B)
-    _B_2(_reader: MsgReader) {
+    _backend_2(_reader: MsgReader) {
         this.dispatchEvent(new CustomEvent("BindComplete"));
     }
 
@@ -257,20 +257,20 @@ export class PGConn extends EventDispatcher {
     }
 
     // CloseComplete (B)
-    _B_3(_reader: MsgReader) {
+    _backend_3(_reader: MsgReader) {
         const event = new CustomEvent("CloseComplete")
         this.dispatchEvent(event)
     }
 
     // CommandComplete (B)
-    _B_C(reader: MsgReader) {
+    _backend_C(reader: MsgReader) {
         const tag = reader.string()
         const event = new CustomEvent("CommandComplete", { detail: tag })
         this.dispatchEvent(event)
     }
 
     // DataRow (B)
-    _B_D(reader: MsgReader) {
+    _backend_D(reader: MsgReader) {
         const nCols = reader.int16();
         const cols = [];
 
@@ -300,12 +300,12 @@ export class PGConn extends EventDispatcher {
     }
 
     // EmptyQueryResponse (B)
-    _B_I(_r: MsgReader) {
+    _backend_I(_r: MsgReader) {
         this.dispatchEvent(new CustomEvent("EmptyQueryResponse"));
     }
 
     // ErrorResponse (B)
-    _B_E(r: MsgReader) {
+    _backend_E(r: MsgReader) {
         const errors = [];
 
         while (r.view.getUint8(r.pos) != 0) {
@@ -337,7 +337,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // NoticeResponse (B)
-    _B_N(reader: MsgReader) {
+    _backend_N(reader: MsgReader) {
         const notices = [];
 
         while (reader.view.getUint8(reader.pos) != 0) {
@@ -348,7 +348,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // ParameterStatus (B)
-    _B_S(reader: MsgReader) {
+    _backend_S(reader: MsgReader) {
         const param = {
             name: reader.string(),
             value: reader.string()
@@ -381,7 +381,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // ParseComplete (B)
-    _B_1(_reader: MsgReader) {
+    _backend_1(_reader: MsgReader) {
         this.dispatchEvent(new CustomEvent("ParseComplete"));
     }
 
@@ -402,7 +402,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // PortalSuspended (B)
-    _B_s() {
+    _backend_s() {
         this.dispatchEvent(new CustomEvent("PortalSuspended"));
     }
 
@@ -416,7 +416,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // ReadyForQuery (B)
-    _B_Z(reader: MsgReader) {
+    _backend_Z(reader: MsgReader) {
         const status = reader.char8();
         const event = new CustomEvent("ReadyForQuery", {
             detail: {
@@ -428,7 +428,7 @@ export class PGConn extends EventDispatcher {
     }
 
     // RowDescription (B)
-    _B_T(reader: MsgReader) {
+    _backend_T(reader: MsgReader) {
         const fields = [];
         const nFields = reader.int16();
 
