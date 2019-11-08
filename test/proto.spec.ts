@@ -63,24 +63,27 @@ describe('EventDispatcher', function() {
     });
 });
 
+class SocketMock {
+    private _readers: Array<MsgReader>
 
-const SocketMock = function() {
-    this._readers = [];
-};
+    constructor() {
+        this._readers = [];
+    }
 
-SocketMock.prototype.send = function(packet: any): void {
-    this._readers.push(new MsgReader(new DataView(packet)));
-};
+    send(packet: any): void {
+        this._readers.push(new MsgReader(new DataView(packet)));
+    }
 
-SocketMock.prototype.packetCount = function() {
-    return this._readers.length;
-};
+    packetCount(): number {
+        return this._readers.length;
+    }
 
-SocketMock.prototype.popReader = function() {
-    return this._readers.shift();
-};
+    popReader(): MsgReader {
+        return this._readers.shift();
+    }
+}
 
-const s2u8 = function(s: string) {
+const s2u8 = function(s: string): Uint8Array {
     let r = [];
 
     for (let i = 0; i < s.length; i++) {
@@ -88,7 +91,7 @@ const s2u8 = function(s: string) {
     }
 
     return new Uint8Array(r);
-};
+}
 
 class AssertReader {
     r: any
