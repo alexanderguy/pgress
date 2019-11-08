@@ -28,7 +28,7 @@ export class EventDispatcher implements EventTarget {
         this._events[eventType] = events;
     }
 
-    dispatchEvent(event: CustomEvent) {
+    dispatchEvent(event: Event) {
         const eventType = event.type.toLowerCase();
 
         log.debug("event type is:", eventType, event);
