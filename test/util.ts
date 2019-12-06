@@ -1,11 +1,31 @@
 import { strict as assert } from 'assert';
 import { MsgReader } from "../src/msg";
+import { EventDispatcher } from "../src/proto";
 
-export class SocketMock {
-    private _readers: Array<MsgReader>
+export class SocketMock extends EventDispatcher implements WebSocket {
+    readonly CONNECTING = 0
+    readonly OPEN = 1
+    readonly CLOSING = 2
+    readonly CLOSED = 3
 
-    constructor() {
-        this._readers = [];
+    private _readers: Array<MsgReader> = [];
+    extensions = ""
+    bufferedAmount = 0
+    protocol = ""
+    readyState = this.CLOSED
+    url = ""
+    binaryType = <BinaryType>"arraybuffer"
+
+    onclose: ((this: WebSocket, ev: CloseEvent) => any) | null;
+    onerror: ((this: WebSocket, ev: Event) => any) | null;
+    onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null;
+    onopen: ((this: WebSocket, ev: Event) => any) | null;
+
+    constructor(url: string, protocols?: string | string[]) {
+        super()
+    }
+
+    close(code?, reason?): void {
     }
 
     send(packet: any): void {
