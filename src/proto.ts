@@ -35,13 +35,21 @@ export class EventDispatcher implements EventTarget {
 
         const handlers = this._events[eventType];
 
-        if (!handlers) {
-            return true;
+        if (handlers) {
+            // XXX - Handle canceling and whatnot here.
+            for (let i = 0; i < handlers.length; i++) {
+                handlers[i](event);
+            }
         }
 
-        // XXX - Handle canceling and whatnot here.
-        for (let i = 0; i < handlers.length; i++) {
-            handlers[i](event);
+        let eventMethod = "on" + eventType;
+
+        if (this.hasOwnProperty(eventMethod)) {
+            let handler = this[eventMethod];
+
+            if (handler) {
+                this[eventMethod](event);
+            }
         }
 
         return true;

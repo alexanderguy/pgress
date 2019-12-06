@@ -9,15 +9,18 @@ declare function require(module: string): any;
 const md5 = require("../src/md5");
 
 describe('EventDispatcher', function() {
-    describe('SimpleSingle', function() {
-        const d = new EventDispatcher();
-        const eventCount = {};
+    let eventCount = {};
 
-        let incEvent = function(e: CustomEvent) {
-            let count = eventCount[e.type] || 0;
-            count += 1;
-            eventCount[e.type] = count;
-        };
+    let incEvent = function(e: any) {
+        let count = eventCount[e.type] || 0;
+        count += 1;
+        eventCount[e.type] = count;
+    };
+
+    describe('SimpleSingle', function() {
+        eventCount = {};
+
+        const d = new EventDispatcher();
 
         it('addListeners', function() {
             d.addEventListener("someEvent", incEvent);
@@ -59,6 +62,23 @@ describe('EventDispatcher', function() {
 
         it('removeNonexistent', function() {
             d.removeEventListener("nonexistent", incEvent);
+        });
+
+    });
+    describe('DirectMethod', function() {
+        eventCount = {};
+        let sock = new SocketMock();
+
+        it("checkClose0", function() {
+            sock.onclose = incEvent
+            sock.dispatchEvent(new CustomEvent("close"));
+            assert.equal(eventCount['close'], 1);
+        });
+
+        it("removeClose0", function() {
+            sock.onclose = undefined;
+            sock.dispatchEvent(new CustomEvent("close"));
+            assert.equal(eventCount['close'], 1);
         });
 
     });
