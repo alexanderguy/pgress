@@ -67,65 +67,73 @@ class MsgReader {
     }
 }
 
-function MsgWriter(id?: string): void {
-    this.buf = new ArrayBuffer(4096);
-    this.view = new DataView(this.buf);
-    this.pos = 0;
-    this.sizePos = 0;
-    this.id = id;
+class MsgWriter {
+    buf: ArrayBuffer
+    view: DataView
+    pos: number
+    sizePos: number
+    id: string
 
-    if (this.id) {
-        this.char8(this.id);
+    constructor(id?: string) {
+        this.buf = new ArrayBuffer(4096)
+        this.view = new DataView(this.buf)
+        this.pos = 0
+        this.sizePos = 0
+        this.id = id
+
+        if (this.id) {
+            this.char8(this.id);
+        }
+
+        // Make space for the size.
+        this.int32(0);
     }
 
-    // Make space for the size.
-    this.int32(0);
+    int32(v: number) {
+        this.view.setInt32(this.pos, v);
+        this.pos += 4;
+    }
+
+    int16(v: number) {
+        this.view.setInt16(this.pos, v);
+        this.pos += 2;
+    }
+
+    uint8array(v: Array<number> | Uint8Array): void {
+        // XXX - We could do this better.
+        for (let i = 0; i < v.length; i++) {
+            this.uint8(v[i]);
+        }
+    }
+
+    string(v: string) {
+        let enc = new TextEncoder();
+        let sBuf = enc.encode(v);
+        this.uint8array(sBuf)
+        this.uint8(0);
+    }
+
+    uint8(v: number) {
+        this.view.setUint8(this.pos, v);
+        this.pos += 1;
+    }
+
+    char8(v: string) {
+        this.uint8(v.charCodeAt(0));
+    }
+
+    finish() {
+        let res = this.buf.slice(0, this.pos);
+        let view = new DataView(res);
+
+        if (this.id) {
+            view.setInt32(1, this.pos - 1);
+        } else {
+            view.setInt32(0, this.pos);
+        }
+
+        return res;
+    }
 }
-
-MsgWriter.prototype.int32 = function(v: number) {
-    this.view.setInt32(this.pos, v);
-    this.pos += 4;
-};
-
-MsgWriter.prototype.int16 = function(v: number) {
-    this.view.setInt16(this.pos, v);
-    this.pos += 2;
-};
-
-MsgWriter.prototype.uint8array = function(v: Array<number>) {
-    // XXX - We could do this better.
-    for (let i = 0; i < v.length; i++) {
-        this.uint8(v[i]);
-    }
-};
-
-MsgWriter.prototype.string = function(v: string) {
-    let enc = new TextEncoder();
-    let sBuf = enc.encode(v);
-    this.uint8array(sBuf)
-    this.uint8(0);
-};
-
-MsgWriter.prototype.uint8 = function(v: number) {
-    this.view.setUint8(this.pos, v);
-    this.pos += 1;
-};
-
-MsgWriter.prototype.char8 = function(v: string) {
-    this.uint8(v.charCodeAt(0));
-};
-
-MsgWriter.prototype.finish = function() {
-    let res = this.buf.slice(0, this.pos);
-    let view = new DataView(res);
-
-    if (this.id) {
-        view.setInt32(1, this.pos - 1);
-    } else {
-        view.setInt32(0, this.pos);
-    }
-
-    return res;
-};
 
 export { MsgWriter, MsgReader };
