@@ -3,7 +3,7 @@ TextEncoder = util.TextEncoder;
 TextDecoder = util.TextDecoder;
 
 var testUtil = require("./util");
-WebSocket = testUtil.SocketMock;
+WebSocket = testUtil.WebSocketMock;
 
 // XXX - Can this come from somewhere else?
 CustomEvent = function (eventType, params) {

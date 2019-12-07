@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import { MsgReader } from "../src/msg";
 import { EventDispatcher } from "../src/proto";
 
-export class SocketMock extends EventDispatcher implements WebSocket {
+export class WebSocketMock extends EventDispatcher implements WebSocket {
     readonly CONNECTING = 0
     readonly OPEN = 1
     readonly CLOSING = 2

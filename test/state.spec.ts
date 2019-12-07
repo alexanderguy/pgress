@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import { PGState } from "../src/main";
-import { SocketMock } from "./util";
+import { WebSocketMock } from "./util";
 
 describe('PGState', function() {
     describe("stateSanityCheck", function() {
@@ -13,7 +13,7 @@ describe('PGState', function() {
         it('connectedMock', function() {
             state.connect();
             assert.notEqual(state.conn.conn, undefined);
-            assert(state.conn.conn instanceof SocketMock)
+            assert(state.conn.conn instanceof WebSocketMock)
         });
     });
 });

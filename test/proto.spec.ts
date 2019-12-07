@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert';
 import { EventDispatcher, PGConn } from "../src/proto";
 import { MsgReader, MsgWriter } from "../src/msg";
-import { SocketMock, AssertReader, ExpectEvents } from "./util";
+import { WebSocketMock, AssertReader, ExpectEvents } from "./util";
 
 // XXX - FIXTHIS - This MD5 module is being barfed on by tsc, so just
 // hide it as any behind a webpack require.
@@ -67,7 +67,7 @@ describe('EventDispatcher', function() {
     });
     describe('DirectMethod', function() {
         eventCount = {};
-        let sock = new SocketMock("someURL");
+        let sock = new WebSocketMock("someURL");
 
         it("checkClose0", function() {
             sock.onclose = incEvent
@@ -87,7 +87,7 @@ describe('EventDispatcher', function() {
 describe('PGConn', function() {
     describe('basicPositive', function() {
         const pg = new PGConn();
-        const sock = new SocketMock("someURL");
+        const sock = new WebSocketMock("someURL");
 
         pg.attachSocket(sock);
 
