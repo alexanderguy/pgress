@@ -12,9 +12,6 @@ export const PGState = function(url: string, database: string, user: string, pas
 
     this.conn = new PGConn();
 
-    const conn = this.conn;
-    const that = this;
-
     let nameCount = 0;
 
     this._checkName = function(nameType: string, name: string) {
@@ -27,6 +24,10 @@ export const PGState = function(url: string, database: string, user: string, pas
         nameCount += 1;
         return name;
     };
+};
+
+PGState.prototype._bindConnEvents = function(conn) {
+    const that = this;
 
     conn.addEventListener("AuthenticationMD5Password", function(e: CustomEvent) {
         conn.passwordMessage(that.user, e.detail.salt, that.password);
@@ -68,6 +69,8 @@ export const PGState = function(url: string, database: string, user: string, pas
 PGState.prototype.connect = function() {
     const ws = new WebSocket(this.url, "binary");
     ws.binaryType = "arraybuffer";
+
+    this._bindConnEvents(this.conn);
     this.conn.attachSocket(ws);
 
     const that = this;
