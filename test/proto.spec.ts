@@ -67,7 +67,7 @@ describe('EventDispatcher', function() {
     });
     describe('DirectMethod', function() {
         eventCount = {};
-        let sock = new SocketMock();
+        let sock = new SocketMock("someURL");
 
         it("checkClose0", function() {
             sock.onclose = incEvent
@@ -87,7 +87,7 @@ describe('EventDispatcher', function() {
 describe('PGConn', function() {
     describe('basicPositive', function() {
         const pg = new PGConn();
-        const sock = new SocketMock();
+        const sock = new SocketMock("someURL");
 
         pg.attachSocket(sock);
 
