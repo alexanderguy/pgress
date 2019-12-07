@@ -77,7 +77,25 @@ export class EventDispatcher implements EventTarget {
     }
 }
 
-export class PGConn extends EventDispatcher {
+export interface PGConnIFace extends EventTarget {
+    attachSocket(sock: any)
+    socketClosed()
+    socketError()
+    recv(incoming: ArrayBuffer)
+    bind(portalName: string, preparedName: string, paramFormats: Array<string>, params: Array<any>, resultFormats: Array<string>)
+    close(closeType: string, name: string)
+    describe(descType: string, name: string)
+    execute(portal: string, nRows: number)
+    flush()
+    parse(name: string, sqlQuery: string, paramTypes: Array<number>)
+    passwordMessage(user: string, salt: string, password: string)
+    query(sqlString: string)
+    startupMessage(params: { [key: string]: string; })
+    sync()
+    terminate()
+}
+
+export class PGConn extends EventDispatcher implements PGConnIFace {
     buf: ArrayBuffer
     conn: any
 
