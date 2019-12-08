@@ -4,7 +4,6 @@
 	"sourceMap": true,
 	"module": "es6",
 	"target": "es5",
-	"allowJs": true,
 	"esModuleInterop": true,
 	"lib": [
 	    "es5",
@@ -12,5 +11,12 @@
 	    "dom"
 	],
 	"moduleResolution": "node",
-  }
+	"declaration": true,
+	"declarationMap": true,
+	"declarationDir": "dist",
+    },
+    "exclude": [
+	"node_modules",
+	"test",
+    ]
 }
