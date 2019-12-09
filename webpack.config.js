@@ -1,7 +1,7 @@
 var path = require('path');
 
 module.exports = {
-    entry: './src/main.ts',
+    entry: './src/index.ts',
     mode: 'development',
     devtool: 'inline-source-map',
     module: {
@@ -18,7 +18,7 @@ module.exports = {
     },
     output: {
 	path: path.resolve(__dirname, 'dist'),
-	filename: 'pgress.js',
+	filename: 'index.js',
 	library: 'pgress',
 	libraryTarget: 'umd'
     },
