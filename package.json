@@ -1,4 +1,6 @@
 {
+    "description": "Native PostgreSQL Client Library For Web Browsers",
+    "license": "MIT",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "devDependencies": {
